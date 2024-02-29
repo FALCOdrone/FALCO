@@ -17,6 +17,7 @@ float thrust[4];
 
 void updateIMU() {
     accel = getAcceleration();
+    quat = getQuaternion();
     speed = computeLinSpeed(accel, prevSpeed);
     prevSpeed = speed;
 }

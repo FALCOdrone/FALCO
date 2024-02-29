@@ -3,6 +3,7 @@
 MPU6050 IMU;  // Change to the name of any supported IMU!
 
 calData calib = {0};  // Calibration data
+float deadZone = [0.0, 0.0, 0.0];
 Madgwick filter;
 
 float prevTime = 0;
@@ -40,6 +41,23 @@ void initializeImu(int calibrate) {
         Serial.println(calib.gyroBias[2]);
         delay(2000);
         IMU.init(calib, IMU_ADDR);
+
+        // Get the dead zone reading the worst values while still for 1.5 seconds
+        AccelData tmp;
+        IMU.getAccel(&tmp);
+        float t = millis();
+        while (millis() - t >= 1500) {
+            IMU.getAccel(&tmp);
+            deadZone[0] = max(deadZone[0], abs(tmp.accelX));
+            deadZone[1] = max(deadZone[1], abs(tmp.accelY));
+            deadZone[2] = max(deadZone[2], abs(tmp.accelZ));
+        }
+        Serial.print("Dead zone: ");
+        Serial.print(deadZone[0]);
+        Serial.print(", ");
+        Serial.print(deadZone[1]);
+        Serial.print(", ");
+        Serial.println(deadZone[2]);
 
         filter.begin(0.2f);
     }
@@ -91,9 +109,10 @@ accel_t getAcceleration() {
 
     IMU.getAccel(&tmp);
 
-    accel.x = tmp.accelX;
-    accel.y = tmp.accelY;
-    accel.z = tmp.accelZ;
+    // Save data considering the dead zone
+    accel.x = (abs(tmp.accelX) > deadZone[0]) ? tmp.accelX : 0.0;
+    accel.y = (abs(tmp.accelY) > deadZone[1]) ? tmp.accelY : 0.0;
+    accel.z = (abs(tmp.accelZ) > deadZone[2]) ? tmp.accelZ : 0.0;
     accel.dt = (currentTime >= accel.t) ? (currentTime - accel.t) / 1000000.0 : (currentTime + (ULONG_MAX - accel.t + 1)) / 1000000.0;
     accel.t = currentTime;
 

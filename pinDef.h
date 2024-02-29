@@ -43,7 +43,7 @@
 #define IMU_ADDR 0x68
 
 // Barometer Address
-#define BARO_ADDR 0x76  // TODO
+#define BARO_ADDR 0x76
 
 // Magnetometer Address
 #define MAG_ADDR  // TODO
