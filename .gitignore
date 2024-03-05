@@ -8,5 +8,7 @@
 # Local History for Visual Studio Code
 .history/
 
+build/
+
 # Built Visual Studio Code Extensions
 *.vsix

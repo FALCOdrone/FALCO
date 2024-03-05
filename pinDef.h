@@ -40,7 +40,8 @@
 #define JETSON_TX 1
 
 // IMU Address
-#define IMU_ADDR 0x68
+//#define IMU_ADDR 0x68
+#define IMU_ADDR 0x69   // UDOO KEY
 
 // Barometer Address
 #define BARO_ADDR 0x76
