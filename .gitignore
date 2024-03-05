@@ -1,5 +1,14 @@
-# Ignore .vscode folder
-.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
 
-# Ignore build folder
+# Local History for Visual Studio Code
+.history/
+
 build/
+
+# Built Visual Studio Code Extensions
+*.vsix

@@ -1,6 +1,6 @@
-#include "controller.h"
+//#include "controller.h"
 #include "imu.h"
-#include "motor.h"
+//#include "motor.h"
 #include "pinDef.h"
 
 #define DEBUG 1
@@ -12,6 +12,17 @@ quat_t quat;
 
 accel_t desiredAccel;
 quat_t desiredQuat;
+
+// create kalman filter
+using namespace BLA;
+
+KALMAN<Nstate, Nobs, Ncom> K;
+BLA::Matrix<Nobs> obs;
+// measurement std (to be characterized from your sensors)
+#define N1 0.03 // noise on the measurement component
+
+// model std (~1/inertia). Freedom you give to relieve your evolution equation
+#define M1 0.01
 
 float thrust[4];
 
@@ -35,16 +46,32 @@ void computeQuat(quat_t *desiredQuat) {
     desiredQuat->z = 0.0;
 }
 
-void setup() {
+void setup()
+{
     Serial.begin(115200);
     initializeImu();
+
     updateIMU();
     accel.t = micros();
+
+    K.Q = {M1, 0.0, 0.0, 0.0, 0.0, 0.0,
+           0.0, M1, 0.0, 0.0, 0.0, 0.0,
+           0.0, 0.0, M1, 0.0, 0.0, 0.0,
+           0.0, 0.0, 0.0, M1, 0.0, 0.0,
+           0.0, 0.0, 0.0, 0.0, M1, 0.0,
+           0.0, 0.0, 0.0, 0.0, 0.0, M1};
+
+    K.R = {N1, 0.0, 0.0,
+           0.0, N1, 0.0,
+           0.0, 0.0, N1};
 }
 
-void loop() {
+void loop()
+{
     updateIMU();
-    if (DEBUG) printIMUData(accel, speed, quat);
+    state_t state = updateKALMAN(&K, accel);
+    if (DEBUG)
+        printIMUData(accel, speed, quat, state);
 
     //computeAccel(&desiredAccel);
     //computeQuat(&desiredQuat);

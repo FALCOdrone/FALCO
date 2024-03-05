@@ -47,6 +47,7 @@ void initializeImu(int calibrate) {
         // Get the dead zone reading the worst values while still for 1.5 seconds
         AccelData tmp;
         float t = millis();
+
         while (millis() - t <= 2000) {
             IMU.update();
             IMU.getAccel(&tmp);
@@ -70,7 +71,8 @@ void initializeImu(int calibrate) {
 void getQuaternion(quat_t *quat) {
     AccelData IMUAccel;
     GyroData IMUGyro;
-    IMU.update();
+
+  IMU.update();
     unsigned long currentTime = micros();
     IMU.getAccel(&IMUAccel);
     IMU.getGyro(&IMUGyro);
@@ -81,6 +83,7 @@ void getQuaternion(quat_t *quat) {
     quat->z = filter.getQuatZ();
     quat->w = filter.getQuatW();
     quat->dt = (currentTime >= quat->t) ? (currentTime - quat->t) / 1000000.0f : (currentTime + (ULONG_MAX - quat->t + 1)) / 1000000.0f;
+
     quat->t = currentTime;
 }
 
@@ -139,6 +142,47 @@ void printIMUData(speed_t speed) {
     Serial.print("m/s, ");
     Serial.print(speed.z);
     Serial.println("m/s");
+}
+
+void printIMUData(state_t state) {
+    Serial.print("Linear Speed EKF: ");
+    Serial.print(state.s.x);
+    Serial.print("m/s, ");
+    Serial.print(state.s.y);
+    Serial.print("m/s, ");
+    Serial.print(state.s.z);
+    Serial.println("m/s");
+}
+
+state_t updateKALMAN(KALMAN<Nstate, Nobs, Ncom> *K, accel_t acc){
+    state_t state;
+    float dt = acc.dt;
+
+    K->F = {1.0f, 0.0f, 0.0f, dt, 0.0f, 0.0f,
+        0.0f, 1.0f, 0.0f, 0.0f, dt, 0.0f,
+        0.0f, 0.0f, 1.0f, 0.0f, 0.0f, dt,
+        0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+        0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f};
+
+    K->B = {dt*dt, 0.0, 0.0,
+        0.0, dt*dt, 0.0,
+        0.0, 0.0, dt*dt,
+        dt*dt, 0.0, 0.0,
+        0.0, dt*dt, 0.0,
+        0.0, 0.0, dt*dt};
+
+    BLA::Matrix<Nobs> obs = {acc.x, acc.y,acc.z};
+    K->update(obs);
+
+    state.p.x=K->x(0);
+    state.p.y=K->x(1);
+    state.p.z=K->x(2);
+    state.s.x=K->x(3);
+    state.s.y=K->x(4);
+    state.s.z=K->x(5);
+
+    return state;
 }
 
 void printIMUData(quat_t quat) {
