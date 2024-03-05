@@ -1,16 +1,18 @@
 #include "imu.h"
 
-MPU6050 IMU;  // Change to the name of any supported IMU!
+// MPU6050 IMU;
+MPU6500 IMU;  // UDOO KEY
 
 calData calib = {0};  // Calibration data
-float deadZone = [0.0, 0.0, 0.0];
+float deadZone[3] = {0.0, 0.0, 0.0};
 Madgwick filter;
 
 float prevTime = 0;
 
 // WARNING: run this strictly when the drone is on a flat surface and not moving
 void initializeImu(int calibrate) {
-    Wire.begin();
+    Wire.begin(18, 21);  // UDOO KEY
+    // Wire.begin();
     Wire.setClock(400000);  // 400khz clock
 
     int err = IMU.init(calib, IMU_ADDR);
@@ -44,82 +46,92 @@ void initializeImu(int calibrate) {
 
         // Get the dead zone reading the worst values while still for 1.5 seconds
         AccelData tmp;
-        IMU.getAccel(&tmp);
         float t = millis();
-        while (millis() - t >= 1500) {
+        while (millis() - t <= 2000) {
+            IMU.update();
             IMU.getAccel(&tmp);
-            deadZone[0] = max(deadZone[0], abs(tmp.accelX));
-            deadZone[1] = max(deadZone[1], abs(tmp.accelY));
-            deadZone[2] = max(deadZone[2], abs(tmp.accelZ));
+            deadZone[0] = max(deadZone[0], abs(tmp.accelX)*5);
+            deadZone[1] = max(deadZone[1], abs(tmp.accelY)*5);
+            deadZone[2] = max(deadZone[2], abs((float)(tmp.accelZ - 1.0))*5);
+            delay(100);
         }
+
         Serial.print("Dead zone: ");
-        Serial.print(deadZone[0]);
+        Serial.print(deadZone[0], 6);
         Serial.print(", ");
-        Serial.print(deadZone[1]);
+        Serial.print(deadZone[1], 6);
         Serial.print(", ");
-        Serial.println(deadZone[2]);
+        Serial.println(deadZone[2], 6);
 
         filter.begin(0.2f);
     }
 }
 
-quat_t getQuaternion() {
+void getQuaternion(quat_t *quat) {
     AccelData IMUAccel;
     GyroData IMUGyro;
-    quat_t quat;
     IMU.update();
     unsigned long currentTime = micros();
     IMU.getAccel(&IMUAccel);
     IMU.getGyro(&IMUGyro);
     filter.updateIMU(IMUGyro.gyroX, IMUGyro.gyroY, IMUGyro.gyroZ, IMUAccel.accelX, IMUAccel.accelY, IMUAccel.accelZ);
 
-    quat.x = filter.getQuatX();
-    quat.y = filter.getQuatY();
-    quat.z = filter.getQuatZ();
-    quat.w = filter.getQuatW();
-    quat.dt = (currentTime >= quat.t) ? (currentTime - quat.t) / 1000000.0 : (currentTime + (ULONG_MAX - quat.t + 1)) / 1000000.0;
-    quat.t = currentTime;
-
-    return quat;
+    quat->x = filter.getQuatX();
+    quat->y = filter.getQuatY();
+    quat->z = filter.getQuatZ();
+    quat->w = filter.getQuatW();
+    quat->dt = (currentTime >= quat->t) ? (currentTime - quat->t) / 1000000.0f : (currentTime + (ULONG_MAX - quat->t + 1)) / 1000000.0f;
+    quat->t = currentTime;
 }
 
 speed_t computeLinSpeed(accel_t acc, speed_t prevSpeed) {
     speed_t currSpeed;
 
     currSpeed.t = micros();
-
-    currSpeed.x = prevSpeed.x + acc.x * acc.dt;
-    currSpeed.y = prevSpeed.y + acc.y * acc.dt;
-    currSpeed.z = prevSpeed.z + acc.z * acc.dt;
+    float ax = abs(acc.x) > deadZone[0] ? acc.x : 0.0;
+    float ay = abs(acc.y) > deadZone[1] ? acc.y : 0.0;
+    float az = abs(acc.z - 1.0) > deadZone[2] ? acc.z : 0.0;
+    currSpeed.x = prevSpeed.x + ax * 9.81 * acc.dt;
+    currSpeed.y = prevSpeed.y + ay * 9.81 * acc.dt;
+    currSpeed.z = prevSpeed.z + az * 9.81 * acc.dt;
 
     // Apply a low pass filter to the speed values
-    currSpeed.x = 0.9 * currSpeed.x + 0.1 * prevSpeed.x;
-    currSpeed.y = 0.9 * currSpeed.y + 0.1 * prevSpeed.y;
-    currSpeed.z = 0.9 * currSpeed.z + 0.1 * prevSpeed.z;
+    currSpeed.x = 0.85 * currSpeed.x + 0.15 * prevSpeed.x;
+    currSpeed.y = 0.85 * currSpeed.y + 0.15 * prevSpeed.y;
+    currSpeed.z = 0.85 * currSpeed.z + 0.15 * prevSpeed.z;
 
     return currSpeed;
 }
 
-accel_t getAcceleration() {
+void getAcceleration(accel_t *accel) {
     IMU.update();
     unsigned long currentTime = micros();
 
-    accel_t accel;
     AccelData tmp;
 
     IMU.getAccel(&tmp);
 
     // Save data considering the dead zone
-    accel.x = (abs(tmp.accelX) > deadZone[0]) ? tmp.accelX : 0.0;
-    accel.y = (abs(tmp.accelY) > deadZone[1]) ? tmp.accelY : 0.0;
-    accel.z = (abs(tmp.accelZ) > deadZone[2]) ? tmp.accelZ : 0.0;
-    accel.dt = (currentTime >= accel.t) ? (currentTime - accel.t) / 1000000.0 : (currentTime + (ULONG_MAX - accel.t + 1)) / 1000000.0;
-    accel.t = currentTime;
-
-    return accel;
+    accel->x = tmp.accelX;
+    accel->y = tmp.accelY;
+    accel->z = tmp.accelZ;
+    accel->dt = (currentTime >= accel->t) ? (currentTime - accel->t) / 1000000.0f : (currentTime + (ULONG_MAX - accel->t + 1)) / 1000000.0f;
+    accel->t = currentTime;
 }
 
-void printIMUData(accel_t accel, speed_t speed, quat_t quat) {
+void printIMUData(accel_t accel) {
+    Serial.print("Acceleration: ");
+    Serial.print(accel.x);
+    Serial.print("g, ");
+    Serial.print(accel.y);
+    Serial.print("g, ");
+    Serial.print(accel.z);
+    Serial.print("g, Time:");
+    Serial.print(accel.dt);
+    Serial.println("s");
+}
+
+void printIMUData(speed_t speed) {
     Serial.print("Linear Speed: ");
     Serial.print(speed.x);
     Serial.print("m/s, ");
@@ -127,7 +139,9 @@ void printIMUData(accel_t accel, speed_t speed, quat_t quat) {
     Serial.print("m/s, ");
     Serial.print(speed.z);
     Serial.println("m/s");
+}
 
+void printIMUData(quat_t quat) {
     Serial.print("Quaternion: ");
     Serial.print(quat.w);
     Serial.print(", ");
@@ -136,14 +150,25 @@ void printIMUData(accel_t accel, speed_t speed, quat_t quat) {
     Serial.print(quat.y);
     Serial.print(", ");
     Serial.println(quat.z);
+}
 
-    Serial.print("Acceleration: ");
-    Serial.print(accel.x * 9.81);
-    Serial.print("m/s^2, ");
-    Serial.print(accel.y * 9.81);
-    Serial.print("m/s^2, ");
-    Serial.print(accel.z * 9.81);
-    Serial.print("m/s^2, Time:");
-    Serial.print(accel.dt);
-    Serial.println("s");
+void printIMUData(accel_t accel, speed_t speed) {
+    printIMUData(accel);
+    printIMUData(speed);
+}
+
+void printIMUData(accel_t accel, quat_t quat) {
+    printIMUData(accel);
+    printIMUData(quat);
+}
+
+void printIMUData(speed_t speed, quat_t quat) {
+    printIMUData(speed);
+    printIMUData(quat);
+}
+
+void printIMUData(accel_t accel, speed_t speed, quat_t quat) {
+    printIMUData(accel);
+    printIMUData(speed);
+    printIMUData(quat);
 }
