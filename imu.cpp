@@ -3,7 +3,7 @@
 MPU6050 IMU;  // Change to the name of any supported IMU!
 
 calData calib = {0};  // Calibration data
-float deadZone = [0.0, 0.0, 0.0];
+float deadZone[3] = {0.0, 0.0, 0.0};
 Madgwick filter;
 
 float prevTime = 0;
@@ -46,7 +46,7 @@ void initializeImu(int calibrate) {
         AccelData tmp;
         IMU.getAccel(&tmp);
         float t = millis();
-        while (millis() - t >= 1500) {
+        while (millis() - t <= 1500) {
             IMU.getAccel(&tmp);
             deadZone[0] = max(deadZone[0], abs(tmp.accelX));
             deadZone[1] = max(deadZone[1], abs(tmp.accelY));
@@ -63,24 +63,22 @@ void initializeImu(int calibrate) {
     }
 }
 
-quat_t getQuaternion() {
+void getQuaternion(quat_t *quat) {
     AccelData IMUAccel;
     GyroData IMUGyro;
-    quat_t quat;
+
     IMU.update();
     unsigned long currentTime = micros();
     IMU.getAccel(&IMUAccel);
     IMU.getGyro(&IMUGyro);
     filter.updateIMU(IMUGyro.gyroX, IMUGyro.gyroY, IMUGyro.gyroZ, IMUAccel.accelX, IMUAccel.accelY, IMUAccel.accelZ);
 
-    quat.x = filter.getQuatX();
-    quat.y = filter.getQuatY();
-    quat.z = filter.getQuatZ();
-    quat.w = filter.getQuatW();
-    quat.dt = (currentTime >= quat.t) ? (currentTime - quat.t) / 1000000.0 : (currentTime + (ULONG_MAX - quat.t + 1)) / 1000000.0;
-    quat.t = currentTime;
-
-    return quat;
+    quat->x = filter.getQuatX();
+    quat->y = filter.getQuatY();
+    quat->z = filter.getQuatZ();
+    quat->w = filter.getQuatW();
+    quat->dt = (currentTime >= quat->t) ? (currentTime - quat->t) / 1000000.0 : (currentTime + (ULONG_MAX - quat->t + 1)) / 1000000.0;
+    quat->t = currentTime;
 }
 
 speed_t computeLinSpeed(accel_t acc, speed_t prevSpeed) {
@@ -100,51 +98,49 @@ speed_t computeLinSpeed(accel_t acc, speed_t prevSpeed) {
     return currSpeed;
 }
 
-accel_t getAcceleration() {
+void getAcceleration(accel_t *accel) {
     IMU.update();
     unsigned long currentTime = micros();
 
-    accel_t accel;
     AccelData tmp;
 
     IMU.getAccel(&tmp);
 
     // Save data considering the dead zone
-    accel.x = (abs(tmp.accelX) > deadZone[0]) ? tmp.accelX : 0.0;
-    accel.y = (abs(tmp.accelY) > deadZone[1]) ? tmp.accelY : 0.0;
-    accel.z = (abs(tmp.accelZ) > deadZone[2]) ? tmp.accelZ : 0.0;
-    accel.dt = (currentTime >= accel.t) ? (currentTime - accel.t) / 1000000.0 : (currentTime + (ULONG_MAX - accel.t + 1)) / 1000000.0;
-    accel.t = currentTime;
-
-    return accel;
+    accel->x = (abs(tmp.accelX) > deadZone[0]) ? tmp.accelX : 0.0;
+    accel->y = (abs(tmp.accelY) > deadZone[1]) ? tmp.accelY : 0.0;
+    accel->z = (abs(tmp.accelZ) > deadZone[2]) ? tmp.accelZ : 0.0;
+    accel->dt = (currentTime >= accel->t) ? (currentTime - accel->t) / 1000000.0 : (currentTime + (ULONG_MAX - accel->t + 1)) / 1000000.0;
+    accel->t = currentTime;
 }
 
-state_t updateKALMAN(KALMAN<Nstate, Nobs> *K, accel_t acc){
+state_t updateKALMAN(KALMAN<Nstate, Nobs, Ncom> *K, accel_t acc){
     state_t state;
     float dt = acc.dt;
-    K->F = {{1, 0, 0, dt, 0, 0},
-        {0, 1, 0, 0, dt, 0},
-        {0, 0, 1, 0, 0, dt},
-        {0, 0, 0, 1, 0, 0},
-        {0, 0, 0, 0, 1, 0},
-        {0, 0, 0, 0, 0, 1}};
 
-    K->B = [dt*dt 0 0;
-        0 dt*dt 0;
-        0 0 dt*dt;
-        dt*dt 0 0;
-        0 dt*dt 0;
-        0 0 dt*dt];
+    K->F = {1.0f, 0.0f, 0.0f, dt, 0.0f, 0.0f,
+        0.0f, 1.0f, 0.0f, 0.0f, dt, 0.0f,
+        0.0f, 0.0f, 1.0f, 0.0f, 0.0f, dt,
+        0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+        0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f};
+
+    K->B = {dt*dt, 0.0, 0.0,
+        0.0, dt*dt, 0.0,
+        0.0, 0.0, dt*dt,
+        dt*dt, 0.0, 0.0,
+        0.0, dt*dt, 0.0,
+        0.0, 0.0, dt*dt};
 
     BLA::Matrix<Nobs> obs = {acc.x, acc.y,acc.z};
     K->update(obs);
 
-    state.p.x=K->x[0];
-    state.p.y=K->x[1];
-    state.p.z=K->x[2];
-    state.s.x=K->x[3];
-    state.s.y=K->x[4];
-    state.s.z=K->x[5];
+    state.p.x=K->x(0);
+    state.p.y=K->x(1);
+    state.p.z=K->x(2);
+    state.s.x=K->x(3);
+    state.s.y=K->x(4);
+    state.s.z=K->x(5);
 
     return state;
 }

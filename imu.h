@@ -7,21 +7,21 @@
 #include "Madgwick.h"
 #include "pinDef.h"
 #include "types.h"
+//kalman filter
+#include "Kalman.h"
 
 #define Nstate 6
 #define Nobs 3
-
-//kalman filter
-#include "Kalman.h"
+#define Ncom 3
 
 #define ULONG_MAX 0xFFFFFFFF
 
 void initializeImu(int calibrate = 1);
-quat_t getQuaternion();
-accel_t getAcceleration();
-speed_t computeLinSpeed(accel_t accel = getAcceleration(), speed_t prevSpeed);
+void getQuaternion(quat_t *quat);
+void getAcceleration(accel_t *accel);
+speed_t computeLinSpeed(accel_t accel, speed_t prevSpeed);
 
-state_t updateKALMAN(KALMAN<Nstate, Nobs> *K , accel_t acc);
+state_t updateKALMAN(KALMAN<Nstate, Nobs, Ncom> *K , accel_t acc);
 
 void printIMUData(accel_t accel, speed_t speed, quat_t quat, state_t state);
 
