@@ -3,7 +3,7 @@
     "configurations": [
         {
             "name": "Arduino",
-            "compilerPath": "C:\\Users\\gbeve\\AppData\\Local\\Arduino15\\packages\\teensy\\tools\\teensy-compile\\11.3.1\\arm\\bin\\arm-none-eabi-g++",
+            "compilerPath": "C:\\Users\\Utente\\AppData\\Local\\Arduino15\\packages\\teensy\\tools\\teensy-compile\\11.3.1\\arm\\bin\\arm-none-eabi-g++",
             "compilerArgs": [
                 "-Wall",
                 "-ffunction-sections",
@@ -12,25 +12,26 @@
             ],
             "intelliSenseMode": "gcc-x64",
             "includePath": [
-                "C:\\Users\\gbeve\\AppData\\Local\\Temp\\arduino\\sketches\\316E0DA1420E2EE3027DD97B6286478F\\pch",
-                "C:\\Users\\gbeve\\AppData\\Local\\Arduino15\\packages\\teensy\\hardware\\avr\\1.59.0\\cores\\teensy4",
-                "C:\\Users\\gbeve\\AppData\\Local\\Arduino15\\packages\\teensy\\hardware\\avr\\1.59.0\\libraries\\Wire",
-                "C:\\Users\\gbeve\\OneDrive - Politecnico di Milano\\Documenti\\Arduino\\libraries\\FastIMU\\src",
-                "c:\\users\\gbeve\\appdata\\local\\arduino15\\packages\\teensy\\tools\\teensy-compile\\11.3.1\\arm\\arm-none-eabi\\include\\c++\\11.3.1",
-                "c:\\users\\gbeve\\appdata\\local\\arduino15\\packages\\teensy\\tools\\teensy-compile\\11.3.1\\arm\\arm-none-eabi\\include\\c++\\11.3.1\\arm-none-eabi",
-                "c:\\users\\gbeve\\appdata\\local\\arduino15\\packages\\teensy\\tools\\teensy-compile\\11.3.1\\arm\\arm-none-eabi\\include\\c++\\11.3.1\\backward",
-                "c:\\users\\gbeve\\appdata\\local\\arduino15\\packages\\teensy\\tools\\teensy-compile\\11.3.1\\arm\\lib\\gcc\\arm-none-eabi\\11.3.1\\include",
-                "c:\\users\\gbeve\\appdata\\local\\arduino15\\packages\\teensy\\tools\\teensy-compile\\11.3.1\\arm\\lib\\gcc\\arm-none-eabi\\11.3.1\\include-fixed",
-                "c:\\users\\gbeve\\appdata\\local\\arduino15\\packages\\teensy\\tools\\teensy-compile\\11.3.1\\arm\\arm-none-eabi\\include"
+                "C:\\Users\\Utente\\AppData\\Local\\Temp\\arduino\\sketches\\18246F8B89178289A5E0FC7D3E229FB1\\pch",
+                "C:\\Users\\Utente\\AppData\\Local\\Arduino15\\packages\\teensy\\hardware\\avr\\1.58.1\\cores\\teensy4",
+                "C:\\Users\\Utente\\AppData\\Local\\Arduino15\\packages\\teensy\\hardware\\avr\\1.58.1\\libraries\\Wire",
+                "C:\\Users\\Utente\\OneDrive\\Documenti\\Arduino\\libraries\\FastIMU\\src",
+                "C:\\Users\\Utente\\OneDrive\\Documenti\\Arduino\\libraries\\BasicLinearAlgebra",
+                "c:\\users\\utente\\appdata\\local\\arduino15\\packages\\teensy\\tools\\teensy-compile\\11.3.1\\arm\\arm-none-eabi\\include\\c++\\11.3.1",
+                "c:\\users\\utente\\appdata\\local\\arduino15\\packages\\teensy\\tools\\teensy-compile\\11.3.1\\arm\\arm-none-eabi\\include\\c++\\11.3.1\\arm-none-eabi",
+                "c:\\users\\utente\\appdata\\local\\arduino15\\packages\\teensy\\tools\\teensy-compile\\11.3.1\\arm\\arm-none-eabi\\include\\c++\\11.3.1\\backward",
+                "c:\\users\\utente\\appdata\\local\\arduino15\\packages\\teensy\\tools\\teensy-compile\\11.3.1\\arm\\lib\\gcc\\arm-none-eabi\\11.3.1\\include",
+                "c:\\users\\utente\\appdata\\local\\arduino15\\packages\\teensy\\tools\\teensy-compile\\11.3.1\\arm\\lib\\gcc\\arm-none-eabi\\11.3.1\\include-fixed",
+                "c:\\users\\utente\\appdata\\local\\arduino15\\packages\\teensy\\tools\\teensy-compile\\11.3.1\\arm\\arm-none-eabi\\include"
             ],
             "forcedInclude": [
-                "C:\\Users\\gbeve\\AppData\\Local\\Temp\\arduino\\sketches\\316E0DA1420E2EE3027DD97B6286478F\\pch\\Arduino.h"
+                "C:\\Users\\Utente\\AppData\\Local\\Temp\\arduino\\sketches\\18246F8B89178289A5E0FC7D3E229FB1\\pch\\Arduino.h"
             ],
             "cStandard": "c11",
-            "cppStandard": "c++17",
+            "cppStandard": "c++14",
             "defines": [
                 "__IMXRT1062__",
-                "TEENSYDUINO=159",
+                "TEENSYDUINO=158",
                 "ARDUINO=10607",
                 "ARDUINO_TEENSY41",
                 "F_CPU=600000000",

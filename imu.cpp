@@ -119,7 +119,37 @@ accel_t getAcceleration() {
     return accel;
 }
 
-void printIMUData(accel_t accel, speed_t speed, quat_t quat) {
+state_t updateKALMAN(KALMAN<Nstate, Nobs> *K, accel_t acc){
+    state_t state;
+    float dt = acc.dt;
+    K->F = {{1, 0, 0, dt, 0, 0},
+        {0, 1, 0, 0, dt, 0},
+        {0, 0, 1, 0, 0, dt},
+        {0, 0, 0, 1, 0, 0},
+        {0, 0, 0, 0, 1, 0},
+        {0, 0, 0, 0, 0, 1}};
+
+    K->B = [dt*dt 0 0;
+        0 dt*dt 0;
+        0 0 dt*dt;
+        dt*dt 0 0;
+        0 dt*dt 0;
+        0 0 dt*dt];
+
+    BLA::Matrix<Nobs> obs = {acc.x, acc.y,acc.z};
+    K->update(obs);
+
+    state.p.x=K->x[0];
+    state.p.y=K->x[1];
+    state.p.z=K->x[2];
+    state.s.x=K->x[3];
+    state.s.y=K->x[4];
+    state.s.z=K->x[5];
+
+    return state;
+}
+
+void printIMUData(accel_t accel, speed_t speed, quat_t quat, state_t state) {
     Serial.print("Linear Speed: ");
     Serial.print(speed.x);
     Serial.print("m/s, ");
@@ -146,4 +176,13 @@ void printIMUData(accel_t accel, speed_t speed, quat_t quat) {
     Serial.print("m/s^2, Time:");
     Serial.print(accel.dt);
     Serial.println("s");
+
+    Serial.print("Linear Speed EKF: ");
+    Serial.print(state.s.x);
+    Serial.print("m/s, ");
+    Serial.print(state.s.y);
+    Serial.print("m/s, ");
+    Serial.print(state.s.z);
+    Serial.println("m/s");
+
 }

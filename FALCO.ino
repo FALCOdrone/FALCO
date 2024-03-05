@@ -13,6 +13,31 @@ quat_t quat;
 accel_t desiredAccel;
 quat_t desiredQuat;
 
+//create kalman filter
+using namespace BLA;
+#define Nstate 6
+#define Nobs 3
+KALMAN<Nstate, Nobs> K;
+BLA::Matrix<Nobs> obs;
+// measurement std (to be characterized from your sensors)
+#define N1 0.03 // noise on the measurement component
+
+
+// model std (~1/inertia). Freedom you give to relieve your evolution equation
+#define M1 0.01;
+
+K.Q ={{M1, 0, 0, 0, 0, 0},
+      {0, M1, 0, 0, 0, 0},
+      {0, 0,  M1, 0, 0, 0},
+      {0, 0,  0, M1,  0, 0},
+      {0, 0,  0, 0, M1,  0},
+      {0, 0,  0, 0, 0, M1 }};
+
+K.R={{N1, 0,  0},
+     {0,  N1, 0},
+     {0,  0,  N1}};
+//end
+
 float thrust[4];
 
 void updateIMU() {
@@ -42,7 +67,8 @@ void setup() {
 
 void loop() {
     updateIMU();
-    if (DEBUG) printIMUData(accel, speed, quat);
+    state = updateKALMAN(&K, accel);
+    if (DEBUG) printIMUData(accel, speed, quat, state);
 
     computeAccel(&desiredAccel);
     computeQuat(&desiredQuat);
