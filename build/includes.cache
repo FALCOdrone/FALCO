@@ -21,6 +21,16 @@
   },
   {
     "Sourcefile": "C:\\Users\\gbeve\\Downloads\\FALCO\\build\\sketch\\FALCO.ino.cpp",
+    "Include": "BasicLinearAlgebra.h",
+    "Includepath": "C:\\Users\\gbeve\\OneDrive - Politecnico di Milano\\Documenti\\Arduino\\libraries\\BasicLinearAlgebra"
+  },
+  {
+    "Sourcefile": "C:\\Users\\gbeve\\Downloads\\FALCO\\build\\sketch\\FALCO.ino.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "C:\\Users\\gbeve\\Downloads\\FALCO\\build\\sketch\\Kalman.cpp",
     "Include": "",
     "Includepath": null
   },

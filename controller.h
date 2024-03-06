@@ -16,6 +16,6 @@
 #define KD_Y 0.001
 #define KD_Z 5
 
-void stabilityPID(float thrust[4], accel_t newAcc, accel_t oldAcc, quat_t newQuat, quat_t oldQuat);
+void stabilityPID(float thrust[4], vec_t newAcc, vec_t oldAcc, quat_t newQuat, quat_t oldQuat);
 
 #endif

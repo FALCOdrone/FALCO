@@ -48,12 +48,13 @@ void initializeImu(int calibrate) {
         // Get the dead zone reading the worst values while still for 1.5 seconds
         AccelData tmp;
         float t = millis();
+
         while (millis() - t <= 2000) {
             IMU.update();
             IMU.getAccel(&tmp);
-            deadZone[0] = max(deadZone[0], abs(tmp.accelX)*5);
-            deadZone[1] = max(deadZone[1], abs(tmp.accelY)*5);
-            deadZone[2] = max(deadZone[2], abs((float)(tmp.accelZ - 1.0))*5);
+            deadZone[0] = max(deadZone[0], abs(tmp.accelX) * 5);
+            deadZone[1] = max(deadZone[1], abs(tmp.accelY) * 5);
+            deadZone[2] = max(deadZone[2], abs((float)(tmp.accelZ - 1.0)) * 5);
             delay(100);
         }
 
@@ -71,6 +72,7 @@ void initializeImu(int calibrate) {
 void getQuaternion(quat_t *quat) {
     AccelData IMUAccel;
     GyroData IMUGyro;
+
     IMU.update();
     unsigned long currentTime = micros();
     IMU.getAccel(&IMUAccel);
@@ -82,11 +84,28 @@ void getQuaternion(quat_t *quat) {
     quat->z = filter.getQuatZ();
     quat->w = filter.getQuatW();
     quat->dt = (currentTime >= quat->t) ? (currentTime - quat->t) / 1000000.0f : (currentTime + (ULONG_MAX - quat->t + 1)) / 1000000.0f;
+
     quat->t = currentTime;
 }
 
-speed_t computeLinSpeed(accel_t acc, speed_t prevSpeed) {
-    speed_t currSpeed;
+void getAcceleration(vec_t *accel) {
+    IMU.update();
+    unsigned long currentTime = micros();
+
+    AccelData tmp;
+
+    IMU.getAccel(&tmp);
+
+    // Save data considering the dead zone
+    accel->x = tmp.accelX;
+    accel->y = tmp.accelY;
+    accel->z = tmp.accelZ;
+    accel->dt = (currentTime >= accel->t) ? (currentTime - accel->t) / 1000000.0f : (currentTime + (ULONG_MAX - accel->t + 1)) / 1000000.0f;
+    accel->t = currentTime;
+}
+
+vec_t computeLinSpeed(vec_t acc, vec_t prevSpeed) {
+    vec_t currSpeed;
 
     currSpeed.t = micros();
     float ax = abs(acc.x) > deadZone[0] ? acc.x : 0.0;
@@ -104,46 +123,46 @@ speed_t computeLinSpeed(accel_t acc, speed_t prevSpeed) {
     return currSpeed;
 }
 
-void getAcceleration(accel_t *accel) {
-    IMU.update();
-    unsigned long currentTime = micros();
+void updateKALMAN(KALMAN<Nstate, Nobs> *K, vec_t *pos, vec_t *speed, vec_t *acc) {
+    float t = micros();
+    float dt = acc->dt;
 
-    AccelData tmp;
+    //      v_x,  v_y,  v_z,  a_x,  a_y,  a_z
+    K->F = {1.0f, 0.0f, 0.0f, dt,   0.0f, 0.0f,
+            0.0f, 1.0f, 0.0f, 0.0f, dt,   0.0f,
+            0.0f, 0.0f, 1.0f, 0.0f, 0.0f, dt,
+            0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+            0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f};
 
-    IMU.getAccel(&tmp);
+    BLA::Matrix<Nobs> obs = {acc->x, acc->y, (acc->z-1)};
+    K->update(obs);
 
-    // Save data considering the dead zone
-    accel->x = tmp.accelX;
-    accel->y = tmp.accelY;
-    accel->z = tmp.accelZ;
-    accel->dt = (currentTime >= accel->t) ? (currentTime - accel->t) / 1000000.0f : (currentTime + (ULONG_MAX - accel->t + 1)) / 1000000.0f;
-    accel->t = currentTime;
+    speed->x = K->x(0);
+    speed->y = K->x(1);
+    speed->z = K->x(2);
+    speed->t = t;
+    acc->x = K->x(3);
+    acc->y = K->x(4);
+    acc->z = K->x(5);
+
 }
 
-void printIMUData(accel_t accel) {
-    Serial.print("Acceleration: ");
-    Serial.print(accel.x);
-    Serial.print("g, ");
-    Serial.print(accel.y);
-    Serial.print("g, ");
-    Serial.print(accel.z);
-    Serial.print("g, Time:");
-    Serial.print(accel.dt);
+void printIMUData(vec_t data, const char *unit) {
+    Serial.print(data.x);
+    Serial.print(unit);
+    Serial.print(", ");
+    Serial.print(data.y);
+    Serial.print(unit);
+    Serial.print(", ");
+    Serial.print(data.z);
+    Serial.print(unit);
+    Serial.print(", Time:");
+    Serial.print(data.dt);
     Serial.println("s");
 }
 
-void printIMUData(speed_t speed) {
-    Serial.print("Linear Speed: ");
-    Serial.print(speed.x);
-    Serial.print("m/s, ");
-    Serial.print(speed.y);
-    Serial.print("m/s, ");
-    Serial.print(speed.z);
-    Serial.println("m/s");
-}
-
 void printIMUData(quat_t quat) {
-    Serial.print("Quaternion: ");
     Serial.print(quat.w);
     Serial.print(", ");
     Serial.print(quat.x);
@@ -151,25 +170,4 @@ void printIMUData(quat_t quat) {
     Serial.print(quat.y);
     Serial.print(", ");
     Serial.println(quat.z);
-}
-
-void printIMUData(accel_t accel, speed_t speed) {
-    printIMUData(accel);
-    printIMUData(speed);
-}
-
-void printIMUData(accel_t accel, quat_t quat) {
-    printIMUData(accel);
-    printIMUData(quat);
-}
-
-void printIMUData(speed_t speed, quat_t quat) {
-    printIMUData(speed);
-    printIMUData(quat);
-}
-
-void printIMUData(accel_t accel, speed_t speed, quat_t quat) {
-    printIMUData(accel);
-    printIMUData(speed);
-    printIMUData(quat);
 }

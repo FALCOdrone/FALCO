@@ -132,8 +132,6 @@ C:\Users\gbeve\Downloads\FALCO\build\sketch\FALCO.ino.cpp.o: \
  C:\Users\gbeve\AppData\Local\Arduino15\packages\esp32\hardware\esp32\2.0.14/tools/sdk/esp32/include/esp_hw_support/include/soc/esp32/spiram.h \
  C:\Users\gbeve\AppData\Local\Arduino15\packages\esp32\hardware\esp32\2.0.14\cores\esp32/io_pin_remap.h \
  C:\Users\gbeve\AppData\Local\Arduino15\packages\esp32\hardware\esp32\2.0.14\cores\esp32/Arduino.h \
- C:\Users\gbeve\Downloads\FALCO\build\sketch\controller.h \
- C:\Users\gbeve\Downloads\FALCO\build\sketch\types.h \
  C:\Users\gbeve\Downloads\FALCO\build\sketch\imu.h \
  C:\Users\gbeve\AppData\Local\Arduino15\packages\esp32\hardware\esp32\2.0.14\libraries\Wire\src/Wire.h \
  C:\Users\gbeve\AppData\Local\Arduino15\packages\esp32\hardware\esp32\2.0.14\cores\esp32/esp32-hal.h \
@@ -168,4 +166,9 @@ C:\Users\gbeve\Downloads\FALCO\build\sketch\FALCO.ino.cpp.o: \
  C:\Users\gbeve\OneDrive\ -\ Politecnico\ di\ Milano\Documenti\Arduino\libraries\FastIMU\src/F_QMI8658_QMC5883L.hpp \
  C:\Users\gbeve\Downloads\FALCO\build\sketch\Madgwick.h \
  C:\Users\gbeve\Downloads\FALCO\build\sketch\pinDef.h \
- C:\Users\gbeve\Downloads\FALCO\build\sketch\motor.h
+ C:\Users\gbeve\Downloads\FALCO\build\sketch\types.h \
+ C:\Users\gbeve\Downloads\FALCO\build\sketch\Kalman.h \
+ C:\Users\gbeve\OneDrive\ -\ Politecnico\ di\ Milano\Documenti\Arduino\libraries\BasicLinearAlgebra/BasicLinearAlgebra.h \
+ C:\Users\gbeve\OneDrive\ -\ Politecnico\ di\ Milano\Documenti\Arduino\libraries\BasicLinearAlgebra/ElementStorage.h \
+ C:\Users\gbeve\OneDrive\ -\ Politecnico\ di\ Milano\Documenti\Arduino\libraries\BasicLinearAlgebra/impl/BasicLinearAlgebra.h \
+ C:\Users\gbeve\OneDrive\ -\ Politecnico\ di\ Milano\Documenti\Arduino\libraries\BasicLinearAlgebra/impl/NotSoBasicLinearAlgebra.h

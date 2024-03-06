@@ -1,33 +1,50 @@
 #include <Arduino.h>
 #line 1 "C:\\Users\\gbeve\\Downloads\\FALCO\\FALCO.ino"
-#include "controller.h"
+// #include "controller.h"
 #include "imu.h"
-#include "motor.h"
+// #include "motor.h"
 #include "pinDef.h"
 
 #define DEBUG 1
 
-speed_t speed;
-speed_t prevSpeed ;
-accel_t accel;
+vec_t pos;
+vec_t speed;
+vec_t accel;
 quat_t quat;
 
-accel_t desiredAccel;
+vec_t prevSpeed;
+
+vec_t desiredAccel;
 quat_t desiredQuat;
+
+// create kalman filter
+using namespace BLA;
+
+KALMAN<Nstate, Nobs> K;
+BLA::Matrix<Nobs> obs;
+
+// measurement std (to be characterized from your sensors)
+// noise on the measurement component
+//#define n_p 0.3 // position measurement noise
+#define n_a 0.03 // acceleration measurement noise
+
+// model std (~1/inertia). Freedom you give to relieve your evolution equation
+#define m_s 0.001
+#define m_a 0.001
 
 float thrust[4];
 
-#line 18 "C:\\Users\\gbeve\\Downloads\\FALCO\\FALCO.ino"
+#line 35 "C:\\Users\\gbeve\\Downloads\\FALCO\\FALCO.ino"
 void updateIMU();
-#line 25 "C:\\Users\\gbeve\\Downloads\\FALCO\\FALCO.ino"
-void computeAccel(accel_t *desiredAccel);
-#line 31 "C:\\Users\\gbeve\\Downloads\\FALCO\\FALCO.ino"
+#line 42 "C:\\Users\\gbeve\\Downloads\\FALCO\\FALCO.ino"
+void computeAccel(vec_t *desiredAccel);
+#line 48 "C:\\Users\\gbeve\\Downloads\\FALCO\\FALCO.ino"
 void computeQuat(quat_t *desiredQuat);
-#line 38 "C:\\Users\\gbeve\\Downloads\\FALCO\\FALCO.ino"
+#line 55 "C:\\Users\\gbeve\\Downloads\\FALCO\\FALCO.ino"
 void setup();
-#line 45 "C:\\Users\\gbeve\\Downloads\\FALCO\\FALCO.ino"
+#line 80 "C:\\Users\\gbeve\\Downloads\\FALCO\\FALCO.ino"
 void loop();
-#line 18 "C:\\Users\\gbeve\\Downloads\\FALCO\\FALCO.ino"
+#line 35 "C:\\Users\\gbeve\\Downloads\\FALCO\\FALCO.ino"
 void updateIMU() {
     getAcceleration(&accel);
     getQuaternion(&quat);
@@ -35,7 +52,7 @@ void updateIMU() {
     prevSpeed = speed;
 }
 
-void computeAccel(accel_t *desiredAccel) {
+void computeAccel(vec_t *desiredAccel) {
     desiredAccel->x = 0.0;
     desiredAccel->y = 0.0;
     desiredAccel->z = 0.0;
@@ -51,19 +68,48 @@ void computeQuat(quat_t *desiredQuat) {
 void setup() {
     Serial.begin(115200);
     initializeImu();
+
     updateIMU();
     accel.t = micros();
+    
+    //     v_x, v_y, v_z, a_x, a_y, a_z
+    K.H = {0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
+           0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
+           0.0, 0.0, 0.0, 0.0, 0.0, 1.0};
+
+    K.Q = {m_s, 0.0, 0.0, 0.0, 0.0, 0.0,
+           0.0, m_s, 0.0, 0.0, 0.0, 0.0,
+           0.0, 0.0, m_s, 0.0, 0.0, 0.0,
+           0.0, 0.0, 0.0, m_a, 0.0, 0.0,
+           0.0, 0.0, 0.0, 0.0, m_a, 0.0,
+           0.0, 0.0, 0.0, 0.0, 0.0, m_a};
+
+    //     a_x, a_y, a_z
+    K.R = {n_a, 0.0, 0.0,
+           0.0, n_a, 0.0,
+           0.0, 0.0, n_a};
 }
 
 void loop() {
     updateIMU();
-    if (DEBUG) printIMUData(accel, speed, quat);
+    updateKALMAN(&K, &pos, &speed, &accel);
+    if (DEBUG) {
+        Serial.print("Position: ");
+        printIMUData(pos, "m");
+        Serial.print("Speed: ");
+        printIMUData(speed, "m/s");
+        Serial.print("Acceleration: ");
+        printIMUData(accel, "m/s^2");
+        Serial.print("Quaternion: ");
+        printIMUData(quat);
+        Serial.println();
+    }
 
-    //computeAccel(&desiredAccel);
-    //computeQuat(&desiredQuat);
+    // computeAccel(&desiredAccel);
+    // computeQuat(&desiredQuat);
 
-    //stabilityPID(thrust, desiredAccel, accel, desiredQuat, quat);
-    //driveMotors(thrust);
+    // stabilityPID(thrust, desiredAccel, accel, desiredQuat, quat);
+    // driveMotors(thrust);
 
     delay(100);
 }

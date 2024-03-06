@@ -257,7 +257,7 @@ void mixer_matrix(float thrust[4]) {
     // We will probably have to output a throttle to the esc (?), therefore we need to study Throttle = f(thrust);
 }
 
-void stabilityPID(float thrust[4], accel_t accel, quat_t quat) {
+void stabilityPID(float thrust[4], vec_t accel, quat_t quat) {
     // STEP 2: error generator;
     error_generator();
     // STEP 3 : position controller:

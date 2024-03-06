@@ -3,10 +3,10 @@
 #define PINDEF_H
 
 // ESCs
-#define M1 23
-#define M2 33
-#define M3 2
-#define M4 12
+#define ESC1 23
+#define ESC2 33
+#define ESC3 2
+#define ESC4 12
 
 // Ultrasonic distance sensors
 #define US1_TRIG 22

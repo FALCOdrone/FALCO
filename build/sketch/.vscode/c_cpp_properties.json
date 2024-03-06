@@ -220,6 +220,7 @@
                 "C:\\Users\\gbeve\\AppData\\Local\\Arduino15\\packages\\esp32\\hardware\\esp32\\2.0.14\\variants\\esp32",
                 "C:\\Users\\gbeve\\AppData\\Local\\Arduino15\\packages\\esp32\\hardware\\esp32\\2.0.14\\libraries\\Wire\\src",
                 "C:\\Users\\gbeve\\OneDrive - Politecnico di Milano\\Documenti\\Arduino\\libraries\\FastIMU\\src",
+                "C:\\Users\\gbeve\\OneDrive - Politecnico di Milano\\Documenti\\Arduino\\libraries\\BasicLinearAlgebra",
                 "c:\\users\\gbeve\\appdata\\local\\arduino15\\packages\\esp32\\tools\\xtensa-esp32-elf-gcc\\esp-2021r2-patch5-8.4.0\\xtensa-esp32-elf\\include\\c++\\8.4.0",
                 "c:\\users\\gbeve\\appdata\\local\\arduino15\\packages\\esp32\\tools\\xtensa-esp32-elf-gcc\\esp-2021r2-patch5-8.4.0\\xtensa-esp32-elf\\include\\c++\\8.4.0\\xtensa-esp32-elf",
                 "c:\\users\\gbeve\\appdata\\local\\arduino15\\packages\\esp32\\tools\\xtensa-esp32-elf-gcc\\esp-2021r2-patch5-8.4.0\\xtensa-esp32-elf\\include\\c++\\8.4.0\\backward",
