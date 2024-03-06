@@ -1,6 +1,8 @@
 #ifndef PINDEF_H
 #define PINDEF_H
 
+#define UDOO 1
+
 // ESCs
 #define ESC1 23
 #define ESC2 33
@@ -40,8 +42,11 @@
 #define JETSON_TX 1
 
 // IMU Address
-//#define IMU_ADDR 0x68
+#ifdef UDOO
 #define IMU_ADDR 0x69   // UDOO KEY
+#else
+#define IMU_ADDR 0x68
+#endif
 
 // Barometer Address
 #define BARO_ADDR 0x76

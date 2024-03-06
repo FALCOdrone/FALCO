@@ -1,7 +1,10 @@
 #include "imu.h"
 
-// MPU6050 IMU;
+#ifdef UDOO
 MPU6500 IMU;  // UDOO KEY
+#else
+MPU6050 IMU;
+#endif
 
 calData calib = {0};  // Calibration data
 float deadZone[3] = {0.0, 0.0, 0.0};
@@ -11,8 +14,13 @@ float prevTime = 0;
 
 // WARNING: run this strictly when the drone is on a flat surface and not moving
 void initializeImu(int calibrate) {
+    
+    #ifdef UDOO
     Wire.begin(18, 21);  // UDOO KEY
-    // Wire.begin();
+    #else
+    Wire.begin();
+    #endif
+
     Wire.setClock(400000);  // 400khz clock
 
     int err = IMU.init(calib, IMU_ADDR);
