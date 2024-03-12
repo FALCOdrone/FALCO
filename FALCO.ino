@@ -27,6 +27,7 @@ BLA::Matrix<Nobs> obs;
 #define n_a 0.03 // acceleration measurement noise
 
 // model std (~1/inertia). Freedom you give to relieve your evolution equation
+#define m_p 0.001
 #define m_s 0.001
 #define m_a 0.001
 
@@ -60,16 +61,19 @@ void setup() {
     accel.t = micros();
     
     //     v_x, v_y, v_z, a_x, a_y, a_z
-    K.H = {0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
-           0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
-           0.0, 0.0, 0.0, 0.0, 0.0, 1.0};
+    K.H = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
+           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
+           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0};
 
-    K.Q = {m_s, 0.0, 0.0, 0.0, 0.0, 0.0,
-           0.0, m_s, 0.0, 0.0, 0.0, 0.0,
-           0.0, 0.0, m_s, 0.0, 0.0, 0.0,
-           0.0, 0.0, 0.0, m_a, 0.0, 0.0,
-           0.0, 0.0, 0.0, 0.0, m_a, 0.0,
-           0.0, 0.0, 0.0, 0.0, 0.0, m_a};
+    K.Q = {m_p, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+           0.0, m_p, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+           0.0, 0.0, m_p, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+           0.0, 0.0, 0.0, m_s, 0.0, 0.0, 0.0, 0.0, 0.0,
+           0.0, 0.0, 0.0, 0.0, m_s, 0.0, 0.0, 0.0, 0.0,
+           0.0, 0.0, 0.0, 0.0, 0.0, m_s, 0.0, 0.0, 0.0,
+           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, m_a, 0.0, 0.0,
+           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, m_a, 0.0,
+           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, m_a};
 
     //     a_x, a_y, a_z
     K.R = {n_a, 0.0, 0.0,
@@ -81,15 +85,17 @@ void loop() {
     updateIMU();
     updateKALMAN(&K, &pos, &speed, &accel);
     if (DEBUG) {
+        /*
         Serial.print("Position: ");
-        printIMUData(pos, "m");
+        printIMUData(&pos, "m");
         Serial.print("Speed: ");
-        printIMUData(speed, "m/s");
+        printIMUData(&speed, "m/s");
         Serial.print("Acceleration: ");
-        printIMUData(accel, "m/s^2");
+        printIMUData(&accel, "m/s^2");
         Serial.print("Quaternion: ");
-        printIMUData(quat);
-        Serial.println();
+        printIMUData(&quat);
+        Serial.println();*/
+        logIMU(&pos, &speed, &accel);
     }
 
     // computeAccel(&desiredAccel);

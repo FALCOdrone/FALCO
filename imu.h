@@ -10,7 +10,7 @@
 //kalman filter
 #include "Kalman.h"
 
-#define Nstate 6
+#define Nstate 9
 #define Nobs 3
 
 #define ULONG_MAX 0xFFFFFFFF
@@ -21,7 +21,9 @@ void getAcceleration(vec_t *accel);
 vec_t computeLinSpeed(vec_t accel, vec_t prevSpeed);
 void updateKALMAN(KALMAN<Nstate, Nobs> *K , vec_t *pos, vec_t *speed, vec_t *acc);
 
-void printIMUData(vec_t data, const char *unit);
-void printIMUData(quat_t quat);
+void printIMUData(vec_t *data, const char *unit);
+void printIMUData(quat_t *quat);
+
+void logIMU(vec_t *pos, vec_t *speed, vec_t *accel);
 
 #endif

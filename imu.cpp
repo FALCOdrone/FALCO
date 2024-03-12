@@ -14,12 +14,11 @@ float prevTime = 0;
 
 // WARNING: run this strictly when the drone is on a flat surface and not moving
 void initializeImu(int calibrate) {
-    
-    #ifdef UDOO
+#ifdef UDOO
     Wire.begin(18, 21);  // UDOO KEY
-    #else
+#else
     Wire.begin();
-    #endif
+#endif
 
     Wire.setClock(400000);  // 400khz clock
 
@@ -135,46 +134,80 @@ void updateKALMAN(KALMAN<Nstate, Nobs> *K, vec_t *pos, vec_t *speed, vec_t *acc)
     float dt = acc->dt;
 
     //      v_x,  v_y,  v_z,  a_x,  a_y,  a_z
-    K->F = {1.0f, 0.0f, 0.0f, dt,   0.0f, 0.0f,
+    /*K->F = {1.0f, 0.0f, 0.0f, dt,   0.0f, 0.0f,
             0.0f, 1.0f, 0.0f, 0.0f, dt,   0.0f,
             0.0f, 0.0f, 1.0f, 0.0f, 0.0f, dt,
             0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
             0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
-            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f};
+            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f};*/
 
-    BLA::Matrix<Nobs> obs = {acc->x, acc->y, (acc->z-1)};
+    //      p_x,  p_y,  p_z,  v_x,  v_y,  v_z,  a_x,  a_y,  a_z
+    K->F = {1.0f, 0.0f, 0.0f, dt, 0.0f, 0.0f, 0.5f * dt * dt, 0.0f, 0.0f,
+            0.0f, 1.0f, 0.0f, 0.0f, dt, 0.0f, 0.0f, 0.5f * dt * dt, 0.0f,
+            0.0f, 0.0f, 1.0f, 0.0f, 0.0f, dt, 0.0f, 0.0f, 0.5f * dt * dt,
+            0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, dt, 0.0f, 0.0f,
+            0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, dt, 0.0f,
+            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, dt,
+            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f};
+
+    BLA::Matrix<Nobs> obs = {acc->x, acc->y, (acc->z - 1)};
     K->update(obs);
 
-    speed->x = K->x(0);
-    speed->y = K->x(1);
-    speed->z = K->x(2);
+    pos->x = K->x(0);
+    pos->y = K->x(1);
+    pos->z = K->x(2);
+    speed->x = K->x(3);
+    speed->y = K->x(4);
+    speed->z = K->x(5);
     speed->t = t;
-    acc->x = K->x(3);
-    acc->y = K->x(4);
-    acc->z = K->x(5);
-
+    acc->x = K->x(6);
+    acc->y = K->x(7);
+    acc->z = K->x(8);
 }
 
-void printIMUData(vec_t data, const char *unit) {
-    Serial.print(data.x);
+void printIMUData(vec_t *data, const char *unit) {
+    Serial.print(data->x);
     Serial.print(unit);
     Serial.print(", ");
-    Serial.print(data.y);
+    Serial.print(data->y);
     Serial.print(unit);
     Serial.print(", ");
-    Serial.print(data.z);
+    Serial.print(data->z);
     Serial.print(unit);
     Serial.print(", Time:");
-    Serial.print(data.dt);
+    Serial.print(data->dt);
     Serial.println("s");
 }
 
-void printIMUData(quat_t quat) {
-    Serial.print(quat.w);
+void printIMUData(quat_t *quat) {
+    Serial.print(quat->w);
     Serial.print(", ");
-    Serial.print(quat.x);
+    Serial.print(quat->x);
     Serial.print(", ");
-    Serial.print(quat.y);
+    Serial.print(quat->y);
     Serial.print(", ");
-    Serial.println(quat.z);
+    Serial.println(quat->z);
+}
+
+void logIMU(vec_t *pos, vec_t *speed, vec_t *accel) {
+    Serial.print(pos->x, 4);
+    Serial.print(",");
+    Serial.print(pos->y, 4);
+    Serial.print(",");
+    Serial.print(pos->z, 4);
+    Serial.print(",");
+    Serial.print(speed->x, 4);
+    Serial.print(",");
+    Serial.print(speed->y, 4);
+    Serial.print(",");
+    Serial.print(speed->z, 4);
+    Serial.print(",");
+    Serial.print(accel->x, 4);
+    Serial.print(",");
+    Serial.print(accel->y, 4);
+    Serial.print(",");
+    Serial.print(accel->z, 4);
+    Serial.println();
 }
