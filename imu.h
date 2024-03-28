@@ -7,8 +7,6 @@
 #include "Madgwick.h"
 #include "pinDef.h"
 #include "types.h"
-//kalman filter
-#include "Kalman.h"
 
 #define Nstate 9
 #define Nobs 3
@@ -16,10 +14,9 @@
 #define ULONG_MAX 0xFFFFFFFF
 
 void initializeImu(int calibrate = 1);
-void getQuaternion(quat_t *quat);
+void getAttitude(quat_t *quat, attitude_t *attitude);
 void getAcceleration(vec_t *accel);
-vec_t computeLinSpeed(vec_t accel, vec_t prevSpeed);
-void updateKALMAN(KALMAN<Nstate, Nobs> *K , vec_t *pos, vec_t *speed, vec_t *acc);
+void getGyro(vec_t *gyro);
 
 void printIMUData(vec_t *data, const char *unit);
 void printIMUData(quat_t *quat);

@@ -6,11 +6,17 @@ MPU6500 IMU;  // UDOO KEY
 MPU6050 IMU;
 #endif
 
+// Filter parameters - Defaults tuned for 2kHz loop rate; Do not touch unless you know what you are doing:
+float B_madgwick = 0.04;  // Madgwick filter parameter
+float B_accel = 0.14;     // Accelerometer LP filter paramter, (MPU6050 default: 0.14. MPU9250 default: 0.2)
+float B_gyro = 0.1;       // Gyro LP filter paramter, (MPU6050 default: 0.1. MPU9250 default: 0.17)
+#ifdef HAS_MAG
+float B_mag = 1.0;  // Magnetometer LP filter parameter
+#endif
+
 calData calib = {0};  // Calibration data
 float deadZone[3] = {0.0, 0.0, 0.0};
 Madgwick filter;
-
-float prevTime = 0;
 
 // WARNING: run this strictly when the drone is on a flat surface and not moving
 void initializeImu(int calibrate) {
@@ -30,6 +36,9 @@ void initializeImu(int calibrate) {
             ;
         }
     }
+
+    IMU.setGyroRange(GYRO_SCALE);
+    IMU.setAccelRange(ACCEL_SCALE);
 
     if (calibrate) {
         Serial.println("Keep IMU level.");
@@ -52,9 +61,10 @@ void initializeImu(int calibrate) {
         IMU.init(calib, IMU_ADDR);
 
         // Get the dead zone reading the worst values while still for 1.5 seconds
-        AccelData tmp;
-        float t = millis();
+        //AccelData tmp;
+        //float t = millis();
 
+        /*
         while (millis() - t <= 2000) {
             IMU.update();
             IMU.getAccel(&tmp);
@@ -70,12 +80,12 @@ void initializeImu(int calibrate) {
         Serial.print(deadZone[1], 6);
         Serial.print(", ");
         Serial.println(deadZone[2], 6);
-
-        filter.begin(0.2f);
+        */
     }
+    filter.begin(B_madgwick);
 }
 
-void getQuaternion(quat_t *quat) {
+void getAttitude(quat_t *quat, attitude_t *att) {
     AccelData IMUAccel;
     GyroData IMUGyro;
 
@@ -85,13 +95,19 @@ void getQuaternion(quat_t *quat) {
     IMU.getGyro(&IMUGyro);
     filter.updateIMU(IMUGyro.gyroX, IMUGyro.gyroY, IMUGyro.gyroZ, IMUAccel.accelX, IMUAccel.accelY, IMUAccel.accelZ);
 
+    // Save quaternions from madgwick filter
     quat->x = filter.getQuatX();
     quat->y = filter.getQuatY();
     quat->z = filter.getQuatZ();
     quat->w = filter.getQuatW();
     quat->dt = (currentTime >= quat->t) ? (currentTime - quat->t) / 1000000.0f : (currentTime + (ULONG_MAX - quat->t + 1)) / 1000000.0f;
-
     quat->t = currentTime;
+
+    // Save euler angles from quaternion
+    att->roll = atan2(2.0f * (quat->w * quat->x + quat->y * quat->z), 1.0f - 2.0f * (quat->x * quat->x + quat->y * quat->y)) * 57.29577951;
+    att->pitch = asin(constrain(2.0f * (quat->w * quat->y - quat->z * quat->x), -0.999999, 0.999999)) * 57.29577951;
+    att->yaw = atan2(2.0f * (quat->w * quat->z + quat->x * quat->y), 1.0f - 2.0f * (quat->y * quat->y + quat->z * quat->z)) * 57.29577951;
+    att->t = currentTime;
 }
 
 void getAcceleration(vec_t *accel) {
@@ -110,63 +126,22 @@ void getAcceleration(vec_t *accel) {
     accel->t = currentTime;
 }
 
-vec_t computeLinSpeed(vec_t acc, vec_t prevSpeed) {
-    vec_t currSpeed;
+void getGyro(vec_t *gyro) {
+    IMU.update();
+    unsigned long currentTime = micros();
 
-    currSpeed.t = micros();
-    float ax = abs(acc.x) > deadZone[0] ? acc.x : 0.0;
-    float ay = abs(acc.y) > deadZone[1] ? acc.y : 0.0;
-    float az = abs(acc.z - 1.0) > deadZone[2] ? acc.z : 0.0;
-    currSpeed.x = prevSpeed.x + ax * 9.81 * acc.dt;
-    currSpeed.y = prevSpeed.y + ay * 9.81 * acc.dt;
-    currSpeed.z = prevSpeed.z + az * 9.81 * acc.dt;
+    GyroData tmp;
 
-    // Apply a low pass filter to the speed values
-    currSpeed.x = 0.85 * currSpeed.x + 0.15 * prevSpeed.x;
-    currSpeed.y = 0.85 * currSpeed.y + 0.15 * prevSpeed.y;
-    currSpeed.z = 0.85 * currSpeed.z + 0.15 * prevSpeed.z;
+    IMU.getGyro(&tmp);
 
-    return currSpeed;
+    gyro->x = tmp.gyroX;
+    gyro->y = tmp.gyroY;
+    gyro->z = tmp.gyroZ;
+    gyro->dt = (currentTime >= gyro->t) ? (currentTime - gyro->t) / 1000000.0f : (currentTime + (ULONG_MAX - gyro->t + 1)) / 1000000.0f;
+    gyro->t = currentTime;
 }
 
-void updateKALMAN(KALMAN<Nstate, Nobs> *K, vec_t *pos, vec_t *speed, vec_t *acc) {
-    float t = micros();
-    float dt = acc->dt;
-
-    //      v_x,  v_y,  v_z,  a_x,  a_y,  a_z
-    /*K->F = {1.0f, 0.0f, 0.0f, dt,   0.0f, 0.0f,
-            0.0f, 1.0f, 0.0f, 0.0f, dt,   0.0f,
-            0.0f, 0.0f, 1.0f, 0.0f, 0.0f, dt,
-            0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
-            0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
-            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f};*/
-
-    //      p_x,  p_y,  p_z,  v_x,  v_y,  v_z,  a_x,  a_y,  a_z
-    K->F = {1.0f, 0.0f, 0.0f, dt, 0.0f, 0.0f, 0.5f * dt * dt, 0.0f, 0.0f,
-            0.0f, 1.0f, 0.0f, 0.0f, dt, 0.0f, 0.0f, 0.5f * dt * dt, 0.0f,
-            0.0f, 0.0f, 1.0f, 0.0f, 0.0f, dt, 0.0f, 0.0f, 0.5f * dt * dt,
-            0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, dt, 0.0f, 0.0f,
-            0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, dt, 0.0f,
-            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, dt,
-            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
-            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
-            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f};
-
-    BLA::Matrix<Nobs> obs = {acc->x, acc->y, (acc->z - 1)};
-    K->update(obs);
-
-    pos->x = K->x(0);
-    pos->y = K->x(1);
-    pos->z = K->x(2);
-    speed->x = K->x(3);
-    speed->y = K->x(4);
-    speed->z = K->x(5);
-    speed->t = t;
-    acc->x = K->x(6);
-    acc->y = K->x(7);
-    acc->z = K->x(8);
-}
-
+// Debug functions
 void printIMUData(vec_t *data, const char *unit) {
     Serial.print(data->x);
     Serial.print(unit);

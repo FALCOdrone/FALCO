@@ -1,7 +1,7 @@
 #ifndef PINDEF_H
 #define PINDEF_H
 
-#define UDOO 1
+//#define UDOO
 
 // ESCs
 #define ESC1 23
@@ -34,6 +34,7 @@
 #define GPS_TX 29
 
 // Radio (UART6)
+#define USE_SBUS_RX
 #define RADIO_RX 25
 #define RADIO_TX 24
 
@@ -43,15 +44,18 @@
 
 // IMU Address
 #ifdef UDOO
-#define IMU_ADDR 0x69   // UDOO KEY
+#define IMU_ADDR 0x69  // UDOO KEY
 #else
 #define IMU_ADDR 0x68
 #endif
+#define GYRO_SCALE 250  // Gyro range in degrees per second
+#define ACCEL_SCALE 2   // Accelerometer range in g's
 
 // Barometer Address
 #define BARO_ADDR 0x76
 
 // Magnetometer Address
-#define MAG_ADDR  // TODO
+// #define HAS_MAG
+// #define MAG_ADDR  // TODO
 
 #endif
