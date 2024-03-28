@@ -1,4 +1,5 @@
 #include <Arduino.h>
+
 #include "controller.h"
 #include "imu.h"
 #include "motor.h"
@@ -11,10 +12,18 @@
 // #define CASCADE_PID
 // #define RATE_PID
 
-//Controller parameters (take note of defaults before modifying!): 
-float maxRoll = 30.0;     //Max roll angle in degrees for angle mode (maximum ~70 degrees), deg/sec for rate mode 
-float maxPitch = 30.0;    //Max pitch angle in degrees for angle mode (maximum ~70 degrees), deg/sec for rate mode
-float maxYaw = 160.0;     //Max yaw rate in deg/sec
+// Controller parameters (take note of defaults before modifying!):
+float maxRoll = 30.0;   // Max roll angle in degrees for angle mode (maximum ~70 degrees), deg/sec for rate mode
+float maxPitch = 30.0;  // Max pitch angle in degrees for angle mode (maximum ~70 degrees), deg/sec for rate mode
+float maxYaw = 160.0;   // Max yaw rate in deg/sec
+
+// Filter parameters - Defaults tuned for 2kHz loop rate; Do not touch unless you know what you are doing:
+float B_madgwick = 0.04;  // Madgwick filter parameter
+float B_accel = 0.14;     // Accelerometer LP filter paramter, (MPU6050 default: 0.14. MPU9250 default: 0.2)
+float B_gyro = 0.1;       // Gyro LP filter paramter, (MPU6050 default: 0.1. MPU9250 default: 0.17)
+#ifdef HAS_MAG
+float B_mag = 1.0;  // Magnetometer LP filter parameter
+#endif
 
 /*** VARIABLES ***/
 vec_t pos;
@@ -95,9 +104,12 @@ void loop() {
     armedStatus();  // Check if the throttle cut is off and throttle is low.
 
     // Get vehicle state
-    getAcceleration(&accel);   // Updates acceleration data (m/s^2)
-    getGyro(&gyro);            // Updates gyro data (deg/sec)
-    getAttitude(&quat, &att);  // Updates roll, pitch, and yaw angle estimates (degrees)
+    getAcceleration(&accel);                // Updates acceleration data (m/s^2)
+    lpFilter(&accel, &accelPrev, B_accel);  // Low pass filter acceleration data (m/s^2)
+    getGyro(&gyro);                         // Updates gyro data (deg/sec)
+    lpFilter(&gyro, &gyroPrev, B_gyro);     // Low pass filter gyro data (deg/sec)
+    getAttitude(&quat, &att);               // Updates roll, pitch, and yaw angle estimates (degrees)
+    lpFilter(&att, &attPrev, B_madgwick);   // Low pass filter attitude data (degrees)
 
     // Compute desired state
     getDesState(radioIn, &desiredAtt, &desiredThrottle);  // Convert raw commands to normalized values based on saturated control limits

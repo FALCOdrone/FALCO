@@ -10,6 +10,32 @@ void setupBlink(int numBlinks, int upTime, int downTime) {
     }
 }
 
+void lpFilter(vec_t *current, vec_t *old, float b) {
+    // DESCRIPTION: Simple low pass filter
+    // INPUTS:
+    //  current: current value
+    //  old: old value
+    //  b: filter coefficient
+    // OUTPUTS:
+    //  current: filtered value
+    current->x = b * current->x + (1 - b) * old->x;
+    current->y = b * current->y + (1 - b) * old->y;
+    current->z = b * current->z + (1 - b) * old->z;
+}
+
+void lpFilter(attitude_t *current, attitude_t *old, float b) {
+    current->roll = b * current->roll + (1 - b) * old->roll;
+    current->pitch = b * current->pitch + (1 - b) * old->pitch;
+    current->yaw = b * current->yaw + (1 - b) * old->yaw;
+}
+
+void lpFilter(quat_t *current, quat_t *old, float b) {
+    current->w = b * current->w + (1 - b) * old->w;
+    current->x = b * current->x + (1 - b) * old->x;
+    current->y = b * current->y + (1 - b) * old->y;
+    current->z = b * current->z + (1 - b) * old->z;
+}
+
 /*
 void printRadioData() {
   if (current_time - print_counter > 10000) {

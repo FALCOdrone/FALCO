@@ -8,9 +8,6 @@
 #include "pinDef.h"
 #include "types.h"
 
-#define Nstate 9
-#define Nobs 3
-
 #define ULONG_MAX 0xFFFFFFFF
 
 void initializeImu(int calibrate = 1);
