@@ -7,9 +7,6 @@
 #include "radio.h"
 #include "utils.h"
 
-using Eigen::MatrixXd;
-using Eigen::VectorXd;
-
 /*** PARAMETERS ***/
 #define DEBUG 1
 // #define CASCADE_PID
