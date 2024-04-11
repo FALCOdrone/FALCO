@@ -1,7 +1,5 @@
 #include <Arduino.h>
 #include "QuadEstimatorEKF.h"
-#include "Eigen/Dense"
-#include "Eigen/Sparse"
 #include "controller.h"
 #include "imu.h"
 #include "motor.h"
@@ -78,6 +76,10 @@ VectorXf ini_state(Nstate);
 MatrixXf ini_stdDevs;
 VectorXf predict_state(Nstate);
 
+// setting initial values for estimation parameters/variables
+ini_state.setZero();
+ini_stdDevs.setIdentity(Nstate, Nstate);
+
 // initialization of the constructor for estimation
 QuadEstimatorEKF estimation(ini_state, ini_stdDevs);
 
@@ -89,10 +91,6 @@ void setup() {
 
     // calibrateESCs(); //PROPS OFF. Uncomment this to calibrate your ESCs by setting throttle stick to max, powering on, and lowering throttle to zero after the beeps
     // Code will not proceed past here if this function is uncommented!
-
-    // setting initial values for estimation parameters/variables
-    ini_state.setZero();
-    ini_stdDevs.setIdentity(Nstate, Nstate);
 
     // Indicate entering main loop with 3 quick blinks
     setupBlink(3, 160, 70);  // numBlinks, upTime (ms), downTime (ms)
