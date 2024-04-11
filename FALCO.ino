@@ -1,11 +1,16 @@
 #include <Arduino.h>
-
+#include "QuadEstimatorEKF.h"
+#include "Eigen/Dense"
+#include "Eigen/Sparse"
 #include "controller.h"
 #include "imu.h"
 #include "motor.h"
 #include "pinDef.h"
 #include "radio.h"
 #include "utils.h"
+
+using Eigen::MatrixXd;
+using Eigen::VectorXd;
 
 /*** PARAMETERS ***/
 #define DEBUG 1
@@ -67,6 +72,15 @@ float motorsCmd[4] = {0};  // Throttle per motor 0->1
 // Flight status
 bool armedFly = false;
 
+// declaring parameters for QuadEstimatorEKF.h class
+const int Nstate = 7;
+VectorXf ini_state(Nstate);
+MatrixXf ini_stdDevs;
+VectorXf predict_state(Nstate);
+
+// initialization of the constructor for estimation
+QuadEstimatorEKF estimation(ini_state, ini_stdDevs);
+
 void setup() {
     Serial.begin(115200);
     initializeImu();
@@ -75,6 +89,10 @@ void setup() {
 
     // calibrateESCs(); //PROPS OFF. Uncomment this to calibrate your ESCs by setting throttle stick to max, powering on, and lowering throttle to zero after the beeps
     // Code will not proceed past here if this function is uncommented!
+
+    // setting initial values for estimation parameters/variables
+    ini_state.setZero();
+    ini_stdDevs.setIdentity(Nstate, Nstate);
 
     // Indicate entering main loop with 3 quick blinks
     setupBlink(3, 160, 70);  // numBlinks, upTime (ms), downTime (ms)
@@ -138,6 +156,13 @@ void loop() {
 
     // Get vehicle commands for next loop iteration
     getCommands(radioIn, radioInPrev);  // Pulls current available radio commands
+
+    estimation.kf_attitudeEstimation(Vector3f(accel.x, accel.y, accel.z), Vector3f(gyro.x, gyro.y, gyro.z), dt);   // quaternion attitude estimation 
+    estimation.getAttitude(&quat, &att);
+    predict_state = estimation.predict(Vector3f(accel.x, accel.y, accel.z), Vector3f(gyro.x, gyro.y, gyro.z), dt);  // prediction of the (x, y, z) position and velocity
+    estimation.getPosVel(&pos, &speed);
+
+    // for estimation: remains to include the update form GPS and from Mag 
 
     // Regulate loop rate
     loopRate(2000);  // Do not exceed 2000Hz, all filter parameters tuned to 2000Hz by default
