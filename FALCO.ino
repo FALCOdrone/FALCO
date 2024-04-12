@@ -1,8 +1,15 @@
+// TODO
+// 1. GPS position convertion
+// 2. Magnetometer yaw calculation
+// 3. Multithreading for reading slow sensors
+
 #include <Arduino.h>
 
 #include "QuadEstimatorEKF.h"
 #include "controller.h"
+#include "gps.h"
 #include "imu.h"
+#include "mag.h"
 #include "motor.h"
 #include "pinDef.h"
 #include "radio.h"
@@ -34,6 +41,10 @@ vec_t speed;
 vec_t speedPrev;
 vec_t accel;
 vec_t accelPrev;
+vec_t mag;
+vec_t magPrev;
+gps_t coord;
+gps_t coordPrev;
 quat_t quat;
 attitude_t att;
 attitude_t attPrev;
@@ -82,6 +93,8 @@ QuadEstimatorEKF estimation(ini_state, ini_stdDevs);
 void setup() {
     Serial.begin(115200);
     initializeImu();
+    initializeGPS();
+    initializeMag();
     initializeMotors();
     initializeRadio();
 
@@ -123,23 +136,22 @@ void loop() {
     lpFilter(&accel, &accelPrev, B_accel);  // Low pass filter acceleration data (m/s^2)
     getGyro(&gyro);                         // Updates gyro data (deg/sec)
     lpFilter(&gyro, &gyroPrev, B_gyro);     // Low pass filter gyro data (deg/sec)
-    //getAttitude(&quat, &att);               // Updates roll, pitch, and yaw angle estimates (degrees)
-    //lpFilter(&att, &attPrev, B_madgwick);   // Low pass filter attitude data (degrees)
+    // getAttitude(&quat, &att);               // Updates roll, pitch, and yaw angle estimates (degrees)
+    // lpFilter(&att, &attPrev, B_madgwick);   // Low pass filter attitude data (degrees)
 
-    // TODO: get data from GPS and Mag
-    if (currentTime - prevTime > (1.0 / GPSrate * 1000000.0)) {
-        // getGPS(&pos, &speed);  // Updates GPS data (m)
-        // getMag(&mag);          // Updates magnetometer data (uT)
-    }
+    // TODO: get position from gps data
+    // How? Position from the starting point? coordinates?
+    getGPS(&coord, &speed);  // Updates GPS data (m)
+    getMag(&mag);          // Updates magnetometer data (uT)
 
     // EKF estimation for attitude, speed and position
     estimation.kf_attitudeEstimation(Vector3f(accel.x, accel.y, accel.z), Vector3f(gyro.x, gyro.y, gyro.z), accel.dt);  // quaternion attitude estimation
     estimation.getAttitude(&quat, &att);
     predict_state = estimation.predict(Vector3f(accel.x, accel.y, accel.z), Vector3f(gyro.x, gyro.y, gyro.z), accel.dt);  // prediction of the (x, y, z) position and velocity
 
-    // TODO: include the update form GPS and from Mag
-    // estimation.updateFromGps(Vector3f(pos.x, pos.y, pos.z), Vector3f(speed.x, speed.y, speed.z), speed.dt);
-    // estimation.updateFromMag(mag.yaw, att.dt);
+    // Include the update form GPS and from Mag
+    estimation.updateFromGps(Vector3f(pos.x, pos.y, pos.z), Vector3f(speed.x, speed.y, speed.z), pos.dt);
+    estimation.updateFromMag(mag.z, mag.dt);  // TODO: calculate yaw from magnetometer data
     estimation.getPosVel(&pos, &speed);
 
     // Compute desired state
@@ -171,6 +183,7 @@ void loop() {
     getCommands(radioIn, radioInPrev);  // Pulls current available radio commands
 
     // Regulate loop rate
+    feedGPS();
     loopRate(2000);  // Do not exceed 2000Hz, all filter parameters tuned to 2000Hz by default
 }
 
@@ -216,6 +229,7 @@ void loopRate(int freq) {
 
     // Sit in loop until appropriate time has passed
     while (invFreq > (checker - currentTime)) {
+        feedGPS();
         checker = micros();
     }
 }
