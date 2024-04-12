@@ -88,7 +88,7 @@ MatrixXf ini_stdDevs;
 VectorXf predict_state(Nstate);
 
 // initialization of the constructor for estimation
-QuadEstimatorEKF estimation(ini_state, ini_stdDevs);
+QuadEstimatorEKF estimation;
 
 void setup() {
     Serial.begin(115200);
@@ -98,10 +98,11 @@ void setup() {
     initializeMotors();
     initializeRadio();
 
-    // setting initial values for estimation parameters/variables
+    // setting initial values for estimation parameters/variables and initializing estimation obj
     ini_state.setZero();
     ini_stdDevs.setIdentity(Nstate, Nstate);
-
+    estimation = QuadEstimatorEKF(ini_state, ini_stdDevs);
+    
     // calibrateESCs(); //PROPS OFF. Uncomment this to calibrate your ESCs by setting throttle stick to max, powering on, and lowering throttle to zero after the beeps
     // Code will not proceed past here if this function is uncommented!
 
