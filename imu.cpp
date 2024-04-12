@@ -7,16 +7,18 @@ MPU6050 IMU;
 #endif
 
 // Filter parameters - Defaults tuned for 2kHz loop rate; Do not touch unless you know what you are doing:
+/*
 float B_madgwick = 0.04;  // Madgwick filter parameter
 float B_accel = 0.14;     // Accelerometer LP filter paramter, (MPU6050 default: 0.14. MPU9250 default: 0.2)
 float B_gyro = 0.1;       // Gyro LP filter paramter, (MPU6050 default: 0.1. MPU9250 default: 0.17)
 #ifdef HAS_MAG
 float B_mag = 1.0;  // Magnetometer LP filter parameter
 #endif
+*/
 
 calData calib = {0};  // Calibration data
 float deadZone[3] = {0.0, 0.0, 0.0};
-Madgwick filter;
+//Madgwick filter;
 
 // WARNING: run this strictly when the drone is on a flat surface and not moving
 void initializeImu(int calibrate) {
@@ -82,9 +84,10 @@ void initializeImu(int calibrate) {
         Serial.println(deadZone[2], 6);
         */
     }
-    filter.begin(B_madgwick);
+    //filter.begin(B_madgwick);
 }
 
+/*
 void getAttitude(quat_t *quat, attitude_t *att) {
     AccelData IMUAccel;
     GyroData IMUGyro;
@@ -109,6 +112,7 @@ void getAttitude(quat_t *quat, attitude_t *att) {
     att->yaw = atan2(2.0f * (quat->w * quat->z + quat->x * quat->y), 1.0f - 2.0f * (quat->y * quat->y + quat->z * quat->z)) * 57.29577951;
     att->t = currentTime;
 }
+*/
 
 void getAcceleration(vec_t *accel) {
     IMU.update();

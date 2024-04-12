@@ -1,4 +1,5 @@
 #include <Arduino.h>
+
 #include "QuadEstimatorEKF.h"
 #include "controller.h"
 #include "imu.h"
@@ -11,6 +12,8 @@
 #define DEBUG 1
 // #define CASCADE_PID
 // #define RATE_PID
+
+int GPSrate = 1;  // Rate at which GPS data is read in Hz
 
 // Controller parameters (take note of defaults before modifying!):
 float maxRoll = 30.0;   // Max roll angle in degrees for angle mode (maximum ~70 degrees), deg/sec for rate mode
@@ -44,7 +47,7 @@ quat_t desiredQuat;
 attitude_t desiredAtt;
 float desiredThrottle;
 
-// General stuff
+// Timing and debugging variables
 float dt;
 unsigned long currentTime, prevTime;
 unsigned long blinkCounter, blinkDelay;
@@ -67,15 +70,11 @@ float motorsCmd[4] = {0};  // Throttle per motor 0->1
 // Flight status
 bool armedFly = false;
 
-// declaring parameters for QuadEstimatorEKF.h class
+// Parameters for EKF
 const int Nstate = 7;
 VectorXf ini_state(Nstate);
 MatrixXf ini_stdDevs;
 VectorXf predict_state(Nstate);
-
-// setting initial values for estimation parameters/variables
-ini_state.setZero();
-ini_stdDevs.setIdentity(Nstate, Nstate);
 
 // initialization of the constructor for estimation
 QuadEstimatorEKF estimation(ini_state, ini_stdDevs);
@@ -85,6 +84,10 @@ void setup() {
     initializeImu();
     initializeMotors();
     initializeRadio();
+
+    // setting initial values for estimation parameters/variables
+    ini_state.setZero();
+    ini_stdDevs.setIdentity(Nstate, Nstate);
 
     // calibrateESCs(); //PROPS OFF. Uncomment this to calibrate your ESCs by setting throttle stick to max, powering on, and lowering throttle to zero after the beeps
     // Code will not proceed past here if this function is uncommented!
@@ -97,7 +100,7 @@ void loop() {
     // Keep track of what time it is and how much time has elapsed since the last loop
     prevTime = currentTime;
     currentTime = micros();
-    dt = (currentTime - prevTime) / 1000000.0;
+    // dt = (currentTime - prevTime) / 1000000.0;
 
     loopBlink();  // Indicate we are in main loop with short blink every 1.5 seconds
 
@@ -110,19 +113,34 @@ void loop() {
     // printRollPitchYaw();  //Prints roll, pitch, and yaw angles in degrees from Madgwick filter (expected: degrees, 0 when level)
     // printPIDoutput();     //Prints computed stabilized PID variables from controller and desired setpoint (expected: ~ -1 to 1)
     // printMotorCommands(); //Prints the values being written to the motors (expected: 120 to 250)
-    // printServoCommands(); //Prints the values being written to the servos (expected: 0 to 180)
     // printLoopRate();      //Prints the time between loops in microseconds (expected: microseconds between loop iterations)
 
     // Get arming status
     armedStatus();  // Check if the throttle cut is off and throttle is low.
 
-    // Get vehicle state
+    // Get vehicle state from IMU
     getAcceleration(&accel);                // Updates acceleration data (m/s^2)
     lpFilter(&accel, &accelPrev, B_accel);  // Low pass filter acceleration data (m/s^2)
     getGyro(&gyro);                         // Updates gyro data (deg/sec)
     lpFilter(&gyro, &gyroPrev, B_gyro);     // Low pass filter gyro data (deg/sec)
-    getAttitude(&quat, &att);               // Updates roll, pitch, and yaw angle estimates (degrees)
-    lpFilter(&att, &attPrev, B_madgwick);   // Low pass filter attitude data (degrees)
+    //getAttitude(&quat, &att);               // Updates roll, pitch, and yaw angle estimates (degrees)
+    //lpFilter(&att, &attPrev, B_madgwick);   // Low pass filter attitude data (degrees)
+
+    // TODO: get data from GPS and Mag
+    if (currentTime - prevTime > (1.0 / GPSrate * 1000000.0)) {
+        // getGPS(&pos, &speed);  // Updates GPS data (m)
+        // getMag(&mag);          // Updates magnetometer data (uT)
+    }
+
+    // EKF estimation for attitude, speed and position
+    estimation.kf_attitudeEstimation(Vector3f(accel.x, accel.y, accel.z), Vector3f(gyro.x, gyro.y, gyro.z), accel.dt);  // quaternion attitude estimation
+    estimation.getAttitude(&quat, &att);
+    predict_state = estimation.predict(Vector3f(accel.x, accel.y, accel.z), Vector3f(gyro.x, gyro.y, gyro.z), accel.dt);  // prediction of the (x, y, z) position and velocity
+
+    // TODO: include the update form GPS and from Mag
+    // estimation.updateFromGps(Vector3f(pos.x, pos.y, pos.z), Vector3f(speed.x, speed.y, speed.z), speed.dt);
+    // estimation.updateFromMag(mag.yaw, att.dt);
+    estimation.getPosVel(&pos, &speed);
 
     // Compute desired state
     getDesState(radioIn, &desiredAtt, &desiredThrottle);  // Convert raw commands to normalized values based on saturated control limits
@@ -151,13 +169,6 @@ void loop() {
 
     // Get vehicle commands for next loop iteration
     getCommands(radioIn, radioInPrev);  // Pulls current available radio commands
-
-    estimation.kf_attitudeEstimation(Vector3f(accel.x, accel.y, accel.z), Vector3f(gyro.x, gyro.y, gyro.z), dt);   // quaternion attitude estimation 
-    estimation.getAttitude(&quat, &att);
-    predict_state = estimation.predict(Vector3f(accel.x, accel.y, accel.z), Vector3f(gyro.x, gyro.y, gyro.z), dt);  // prediction of the (x, y, z) position and velocity
-    estimation.getPosVel(&pos, &speed);
-
-    // for estimation: remains to include the update form GPS and from Mag 
 
     // Regulate loop rate
     loopRate(2000);  // Do not exceed 2000Hz, all filter parameters tuned to 2000Hz by default
