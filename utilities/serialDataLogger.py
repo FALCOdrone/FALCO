@@ -12,13 +12,14 @@ parser.add_argument("-s", "--speed", help="speed in bps",
 args = parser.parse_args()
 
 outputFilePath = os.path.join(os.path.dirname(__file__),
-                              datetime.datetime.now().strftime("%Y-%m-%dT%H.%M.%S") + ".txt")
+                              datetime.datetime.now().strftime("%Y-%m-%dT%H.%M.%S") + ".log")
 
 data = []
 
 with serial.Serial(args.device, args.speed) as ser, open(outputFilePath, mode='wb') as outputFile:
     print("Logging started. Ctrl-C to stop.")
     try:
+
         while True:
             d = ser.readline().strip().decode('ascii')
             # print(data)  # uncomment this line to debug the coming data
@@ -33,8 +34,10 @@ with serial.Serial(args.device, args.speed) as ser, open(outputFilePath, mode='w
         for line in data:
             outputFile.write(str(line[i]).encode('ascii'))
             outputFile.write(b',')
+        
+        outputFile.seek(-1, 2)
+        outputFile.truncate()
         outputFile.write(b'\n')
 
     print("Data saved to", outputFilePath)
-    outputFile.flush()
     outputFile.close()

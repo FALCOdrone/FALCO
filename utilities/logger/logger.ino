@@ -38,14 +38,26 @@ void setup() {
 
 void loop() {
   float x, y, z;
+  float xg, yg, zg;
+  float temp;
 
-  if (IMU.accelerationAvailable()) {
+  if (IMU.accelerationAvailable() && IMU.gyroscopeAvailable() && IMU.temperatureAvailable()) {
     IMU.readAcceleration(x, y, z);
+    IMU.readGyroscope(xg, yg, zg);
+    IMU.readTemperatureFloat(temp);
 
     Serial.print(x);
     Serial.print(',');
     Serial.print(y);
     Serial.print(',');
-    Serial.println(z);
+    Serial.print(z);
+    Serial.print(',');
+    Serial.print(xg);
+    Serial.print(',');
+    Serial.print(yg);
+    Serial.print(',');
+    Serial.print(zg);
+    Serial.print(',');
+    Serial.println(temp);
   }
 }
