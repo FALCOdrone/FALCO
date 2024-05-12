@@ -1,6 +1,6 @@
 #include "QuadEstimatorEKF.h"
 
-QuadEstimatorEKF::QuadEstimatorEKF(VectorXf ini_state, VectorXf ini_stdDevs) {  // for ekf
+void QuadEstimatorEKF::initialize(VectorXf ini_state, VectorXf ini_stdDevs) {  // for ekf
 
     ekfCov.setIdentity(Nstate, Nstate);
 
@@ -17,14 +17,17 @@ QuadEstimatorEKF::QuadEstimatorEKF(VectorXf ini_state, VectorXf ini_stdDevs) {  
     Q *= dtIMU;
 
     R_GPS.setZero(6, 6);
-    R_GPS(0, 0) = R_GPS(1, 1) = powf(GPSPosXYStd, 2);
+    R_GPS(0, 0) = powf(GPSPosXStd, 2);
+    R_GPS(1, 1) = powf(GPSPosYStd, 2);
     R_GPS(2, 2) = powf(GPSPosZStd, 2);
     R_GPS(3, 3) = R_GPS(4, 4) = powf(GPSVelXYStd, 2);
     R_GPS(5, 5) = powf(GPSVelZStd, 2);
 
     // magnetometer measurement model covariance
-    R_Mag.setZero(Nstate, Nstate);
+    R_Mag.setZero(1, 1);
     R_Mag(0, 0) = powf(MagYawStd, 2);
+    R_bar.setZero(1, 1);
+    R_bar(0, 0) = powf(0.2f, 2);
 
     // attitude estimation
     xt_at.setZero(4);
@@ -248,13 +251,13 @@ Matrix3f QuadEstimatorEKF::quatRotMat_2(VectorXf q) {
     return m;
 }
 
-VectorXf QuadEstimatorEKF::predict(Vector3f acc, Vector3f gyro, float dt) {
+void QuadEstimatorEKF::predict(Vector3f acc, Vector3f gyro, float dt) {
     VectorXf predictedState = ekfState;
     Vector3f inertial_accel;
     MatrixXf R_bg(3, 3);
     R_bg = quatRotMat(xt_at);
     inertial_accel = R_bg * acc;
-    inertial_accel(2) = inertial_accel(2) + 9.81;  // remove gravity
+    inertial_accel(2) = inertial_accel(2);  // remove gravity
 
     predictedState(0) = ekfState(0) + ekfState(3) * dt;
     predictedState(1) = ekfState(1) + ekfState(4) * dt;
@@ -282,8 +285,6 @@ VectorXf QuadEstimatorEKF::predict(Vector3f acc, Vector3f gyro, float dt) {
 
     ekfCov = gPrime * ekfCov * gTranspose + Q;
     ekfState = predictedState;
-
-    return ekfState;
 }
 
 void QuadEstimatorEKF::update_ekf(VectorXf z, MatrixXf H, MatrixXf R, VectorXf zFromX, float dt) {
@@ -305,7 +306,7 @@ void QuadEstimatorEKF::update_ekf(VectorXf z, MatrixXf H, MatrixXf R, VectorXf z
     ekfCov = (eye - K * H) * ekfCov;
 }
 
-void QuadEstimatorEKF::updateFromMag(float dt, float magYaw) {
+void QuadEstimatorEKF::updateFromMag(float magYaw, float dt) {
     VectorXf z(1), zFromX(1);
     z(0) = magYaw;  // measure done by the mag, magYaw taken by the magnatometer
     zFromX(0) = ekfState(6);
@@ -313,14 +314,13 @@ void QuadEstimatorEKF::updateFromMag(float dt, float magYaw) {
     MatrixXf hPrime(1, Nstate);
     hPrime.setZero();
     hPrime(0, 6) = 1;
-    //float QYawStd = 2.0f;
+    // float QYawStd = 2.0f;
 
     if (abs(z(0) - zFromX(0)) > PI) {
-        if (z(0) < zFromX(0)) {
+        if (z(0) < zFromX(0))
             z(0) += 2.f * PI;
-        } else {
-            z(0) -= 2.f * PI;
-        }
+    } else {
+        z(0) -= 2.f * PI;
     }
     update_ekf(z, hPrime, R_Mag, zFromX, dt);
 }
@@ -379,4 +379,41 @@ void QuadEstimatorEKF::getPosVel(vec_t *pos, vec_t *vel) {
     vel->y = ekfState(4);
     vel->z = ekfState(5);
     vel->t = currentTime;
+}
+
+float QuadEstimatorEKF::yawFromMag(vec_t mag, quat_t quat) {
+    VectorXf quat_readings(4);
+    quat_readings(0) = quat.w;
+    quat_readings(1) = quat.x;
+    quat_readings(2) = quat.y;
+    quat_readings(3) = quat.z;
+
+    VectorXf euler_angles = EPEuler321(quat_readings);
+    float pitch = euler_angles(1);
+    float roll = euler_angles(2);
+
+    float Bx = mag.x;
+    float By = mag.y;
+
+    float yawMag = atan2f(By * cos(roll) - Bx * sin(roll), Bx * cos(pitch) + By * sin(pitch) * sin(roll));
+
+    return yawMag;
+}
+
+float QuadEstimatorEKF::zFromBar(float P) {
+    float P0 = 1013.0;  // hPa (hectopascal) -> 1hPa = 1mBar
+    float altitude_from_bar = 44330 * (1 - pow(P / P0, 1 / (5.255)));
+    return altitude_from_bar;
+}
+
+void QuadEstimatorEKF::updateFromBar(float P, float dt) {
+    VectorXf z(1), zFromX(1);
+    z(0) = zFromBar(P);
+    zFromX(0) = ekfState(2);
+
+    MatrixXf hprime(1, 7);
+    hprime.setZero();
+    hprime(0, 2) = 1;
+
+    update_ekf(z, hprime, R_bar, zFromX, dt);
 }

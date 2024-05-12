@@ -6,6 +6,7 @@
 #include <Arduino.h>
 
 #include "QuadEstimatorEKF.h"
+#include "baro.h"
 #include "controller.h"
 #include "gps.h"
 #include "imu.h"
@@ -51,6 +52,18 @@ attitude_t attPrev;
 attitude_t passthru;
 vec_t gyro;
 vec_t gyroPrev;
+bar_t bar;
+
+vec_t accelWithOffset;
+VectorXf accelWithOffset2(3);
+VectorXf fixed_accel(3);
+vec_t posGPS;
+vec_t posGPS0;  // position (from gps) of starting point
+gps_t coordGPS;
+vec_t speedGPS;
+float yawMag;
+float lat0;         // latitude at starting point, used for projection (lat long -> x y)
+float r = 6371000;  // earth radius (m)
 
 // Desired values
 vec_t desiredAccel;
@@ -84,30 +97,44 @@ bool armedFly = false;
 // Parameters for EKF
 const int Nstate = 7;
 VectorXf ini_state(Nstate);
-MatrixXf ini_stdDevs;
+VectorXf ini_stdDevs(Nstate);
 VectorXf predict_state(Nstate);
+MatrixXf R(3, 3);
 
 // initialization of the constructor for estimation
 QuadEstimatorEKF estimation;
 
 void setup() {
     Serial.begin(115200);
+    Serial.println("Initialization starting");
     initializeImu();
     initializeGPS();
     initializeMag();
-    initializeMotors();
-    initializeRadio();
+    initializeBarometer();
+    // initializeMotors();
+    // initializeRadio();
 
     // setting initial values for estimation parameters/variables and initializing estimation obj
     ini_state.setZero();
-    ini_stdDevs.setIdentity(Nstate, Nstate);
-    estimation = QuadEstimatorEKF(ini_state, ini_stdDevs);
-    
+    ini_stdDevs.setOnes();
+    estimation.initialize(ini_state, ini_stdDevs);
+
+    // setting initial values for estimation parameters/variables
+    R << cos(PI / 4), sin(PI / 4), 0,
+        -sin(PI / 4), cos(PI / 4), 0,
+        0, 0, 1;
+    lat0 = coordGPS.lat;
+    posGPS0.x = r * coordGPS.lat;              // north
+    posGPS0.y = r * coordGPS.lon * cos(lat0);  // east
+    posGPS0.z = coordGPS.alt;
+
     // calibrateESCs(); //PROPS OFF. Uncomment this to calibrate your ESCs by setting throttle stick to max, powering on, and lowering throttle to zero after the beeps
     // Code will not proceed past here if this function is uncommented!
 
     // Indicate entering main loop with 3 quick blinks
+    currentTime = micros();
     setupBlink(3, 160, 70);  // numBlinks, upTime (ms), downTime (ms)
+    Serial.println("Initialization done");
 }
 
 void loop() {
@@ -142,17 +169,36 @@ void loop() {
 
     // TODO: get position from gps data
     // How? Position from the starting point? coordinates?
-    getGPS(&coord, &speed);  // Updates GPS data (m)
-    getMag(&mag);          // Updates magnetometer data (uT)
+    getGPS(&coordGPS, &speedGPS);  // Updates GPS data (degrees)
+    getMag(&mag);                  // Updates magnetometer data (uT)
+    getBarometer(&bar);            // Updates barometer data (hPa)
+
+    // removing the angular offset
+    accelWithOffset2(0) = accelWithOffset.x;
+    accelWithOffset2(1) = accelWithOffset.y;
+    accelWithOffset2(2) = accelWithOffset.z;
+
+    fixed_accel = R * accelWithOffset2;  // body frame accelleration without offset
+    yawMag = estimation.yawFromMag(mag, quat);
+
+    // projection of gps coordinates to x, y, z
+    posGPS.x = r * coordGPS.lat - posGPS0.x;              // north
+    posGPS.y = r * coordGPS.lon * cos(lat0) - posGPS0.y;  // east
+    posGPS.z = -coordGPS.alt + posGPS0.z;                 // down
+    posGPS.dt = coordGPS.dt;
 
     // EKF estimation for attitude, speed and position
-    estimation.kf_attitudeEstimation(Vector3f(accel.x, accel.y, accel.z), Vector3f(gyro.x, gyro.y, gyro.z), accel.dt);  // quaternion attitude estimation
+    estimation.kf_attitudeEstimation(fixed_accel, Vector3f(gyro.x, gyro.y, gyro.z), accelWithOffset.dt);  // quaternion attitude estimation
     estimation.getAttitude(&quat, &att);
-    predict_state = estimation.predict(Vector3f(accel.x, accel.y, accel.z), Vector3f(gyro.x, gyro.y, gyro.z), accel.dt);  // prediction of the (x, y, z) position and velocity
+    estimation.predict(fixed_accel, Vector3f(gyro.x, gyro.y, gyro.z), accelWithOffset.dt);  // prediction of the (x, y, z) position and velocity
 
-    // Include the update form GPS and from Mag
-    estimation.updateFromGps(Vector3f(pos.x, pos.y, pos.z), Vector3f(speed.x, speed.y, speed.z), pos.dt);
-    estimation.updateFromMag(mag.z, mag.dt);  // TODO: calculate yaw from magnetometer data
+    // compute the update from gps
+    if (isGPSUpdated()) {
+        estimation.updateFromGps(Vector3f(posGPS.x, posGPS.y, posGPS.z), Vector3f(speedGPS.x, speedGPS.y, speedGPS.z), posGPS.dt);
+    }
+    estimation.updateFromMag(yawMag, mag.dt);  // TODO: calculate yaw from magnetometer data
+    estimation.updateFromBar(bar.pressure, bar.dt);
+
     estimation.getPosVel(&pos, &speed);
 
     // Compute desired state

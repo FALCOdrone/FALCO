@@ -15,7 +15,7 @@ byte gpsSaveConfig[] = {
     0xB5, 0x62, 0x06, 0x09, 0x0D, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF,
     0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x21, 0xAF};
 
-void initializeGPS(int gpsBaud) {
+void initializeGPS(int gpsBaud, gps_t *coord) {
     // GPS serial init
     gpsPort.begin(gpsBaud);
     // GPS config
@@ -26,6 +26,14 @@ void initializeGPS(int gpsBaud) {
     gpsPort.end();
     gpsPort.begin(115200);
     */
+    // Set the initial position
+    if (coord != NULL) {
+        while (gps.location.isUpdated() == 0) {
+            feedGPS();
+        }
+        // Store starting position
+        getGPS(coord, NULL);
+    }
 }
 
 void getGPS(gps_t *gpsCoord, vec_t *speed) {
@@ -43,6 +51,10 @@ void getGPS(gps_t *gpsCoord, vec_t *speed) {
         speed->y = gps.speed.mps() * sin(gps.course.deg() * DEG_TO_RAD);
         speed->dt = gps.speed.age() * 1000.0;  // In microseconds
     }
+}
+
+bool isGPSUpdated() {
+    return gps.location.isUpdated() || gps.speed.isUpdated() || gps.course.isUpdated();
 }
 
 // To be ran frequently
