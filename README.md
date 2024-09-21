@@ -1,2 +1,2 @@
-# FALCO Drone Project
-Autonomous driving drone built and developed by AEA, the automation engineering association of Politecnico di Milano
+# FALCO
+Main code for the Teensy 4.1, joins Sensor-Fusion and Control
