@@ -1,8 +1,9 @@
 #ifndef CTRL_H
 #define CTRL_H
 
-#include "types.h"
 #include <Arduino.h>
+
+#include "types.h"
 
 void controlMixer(float throttleDes, float mCmdScaled[], attitude_t attPID);
 void controlANGLE(unsigned long throttleCmd /*channel_1_pwm */, attitude_t desiredAtt, vec_t gyro, attitude_t attIMU, PID_t *PID);

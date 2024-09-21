@@ -1,23 +1,30 @@
 #ifndef IMU_H
 #define IMU_H
 
-#include <Wire.h>
-
-#include "FastIMU.h"
-//#include "Madgwick.h"
+#include "I2Cdev.h"
+#include "MPU6050_6Axis_MotionApps612.h"
+#include "Wire.h"
+#include "limits.h"
 #include "pinDef.h"
 #include "types.h"
-#include "limits.h"
 
-//#define ULONG_MAX 0xFFFFFFFF
+// #define ULONG_MAX 0xFFFFFFFF
 
-void initializeImu(int calibrate = 1);
-//void getAttitude(quat_t *quat, attitude_t *attitude);
+void initializeImu();
+void getQuaternion(quat_t *quat);
+void getAttitude(attitude_t *ypr);
+void getRawAccel(vec_t *accel);
+void getRawGyro(vec_t *gyro);
+void getRealAccel(vec_t *accel);
+void getWorldAccel(vec_t *accel);
 void getAcceleration(vec_t *accel);
 void getGyro(vec_t *gyro);
 
 void printIMUData(vec_t *data, const char *unit);
+void printIMUData(vec_t *data);
+void printIMUData(bar_t *data);
 void printIMUData(quat_t *quat);
+void printIMUData(attitude_t *att);
 
 void logIMU(vec_t *pos, vec_t *speed, vec_t *accel);
 

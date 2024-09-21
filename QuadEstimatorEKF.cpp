@@ -323,6 +323,8 @@ void QuadEstimatorEKF::updateFromMag(float magYaw, float dt) {
         z(0) -= 2.f * PI;
     }
     update_ekf(z, hPrime, R_Mag, zFromX, dt);
+    estAttitude(0) = ekfState(6);
+    xt_at = Euler3212EP(estAttitude);
 }
 
 void QuadEstimatorEKF::updateFromGps(Vector3f pos, Vector3f vel, float dt) {
@@ -399,16 +401,16 @@ float QuadEstimatorEKF::yawFromMag(vec_t mag, quat_t quat) {
 
     return yawMag;
 }
-
+/*
 float QuadEstimatorEKF::zFromBar(float P) {
-    float P0 = 1013.0;  // hPa (hectopascal) -> 1hPa = 1mBar
-    float altitude_from_bar = 44330 * (1 - pow(P / P0, 1 / (5.255)));
-    return altitude_from_bar;
+  float P0 = 1013.0; //hPa (hectopascal) -> 1hPa = 1mBar
+  float altitude_from_bar = 44330 * (1 - pow(P/P0, 1/(5.255)));
+  return altitude_from_bar;
 }
-
-void QuadEstimatorEKF::updateFromBar(float P, float dt) {
+*/
+void QuadEstimatorEKF::updateFromBar(float altitude, float dt) {
     VectorXf z(1), zFromX(1);
-    z(0) = zFromBar(P);
+    z(0) = altitude;
     zFromX(0) = ekfState(2);
 
     MatrixXf hprime(1, 7);

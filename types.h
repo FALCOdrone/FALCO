@@ -31,9 +31,9 @@ typedef struct {
 
 // GPS
 typedef struct {
-    float lat = 0.0f;
-    float lon = 0.0f;
-    float alt = 0.0f;
+    double lat = 0.0f;
+    double lon = 0.0f;
+    double alt = 0.0f;
     unsigned long t = 0.0f;
     float dt = 0.0f;
 } gps_t;
@@ -54,7 +54,6 @@ typedef struct {
 typedef struct {
     float pressure = 0.0f;
     float temperature = 0.0f;
-    float humidity = 0.0f;
     float altitude = 0.0f;
     unsigned long t = 0.0f;
     float dt = 0.0f;

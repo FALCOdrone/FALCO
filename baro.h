@@ -9,7 +9,7 @@
 #include "limits.h"
 #include "types.h"
 
-void initializeBarometer();
+bool initializeBarometer();
 void getBarometer(bar_t *baroData);
 
 #endif

@@ -1,7 +1,7 @@
 #include "controller.h"
 
 // Controller parameters (take note of defaults before modifying!):
-float i_limit = 25.0;   // Integrator saturation level, mostly for safety (default 25.0)
+float i_limit = 25.0;  // Integrator saturation level, mostly for safety (default 25.0)
 
 float Kp_roll_angle = 0.2;    // Roll P-gain - angle mode
 float Ki_roll_angle = 0.3;    // Roll I-gain - angle mode
