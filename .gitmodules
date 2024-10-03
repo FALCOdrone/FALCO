@@ -1,0 +1,3 @@
+[submodule "Sensor-Fusion"]
+	path = Sensor-Fusion
+	url = https://github.com/FALCOdrone/Sensor-Fusion
