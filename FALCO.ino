@@ -5,7 +5,7 @@
 
 #include <Arduino.h>
 
-#include "QuadEstimatorEKF.h"
+#include "sensorFusion\QuadEstimatorEKF.h"
 #include "baro.h"
 #include "controller.h"
 #include "gps.h"
