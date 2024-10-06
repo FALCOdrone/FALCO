@@ -1,6 +1,9 @@
 [submodule "Sensor-Fusion"]
-	path = sensorFusion
+	path = Sensor-Fusion
 	url = https://github.com/FALCOdrone/Sensor-Fusion
 [submodule "Control"]
-	path = control
+	path = Control
 	url = https://github.com/FALCOdrone/Control
+[submodule "sensorFusion"]
+	path = sensorFusion
+	url = https://github.com/FALCOdrone/Sensor-Fusion
