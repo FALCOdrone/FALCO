@@ -5,16 +5,18 @@
 
 #include <Arduino.h>
 
-#include "sensorFusion\QuadEstimatorEKF.h"
-#include "baro.h"
-#include "controller.h"
-#include "gps.h"
-#include "imu.h"
-#include "mag.h"
-#include "motor.h"
-#include "pinDef.h"
-#include "radio.h"
-#include "utils.h"
+#include "sensorFusion\EstimatorEKF.h"
+#include "sensorFusion\baro.h"
+#include "sensorFusion\gps.h"
+#include "sensorFusion\imu.h"
+#include "sensorFusion\mag.h"
+
+#include "control\controller.h"
+#include "control\motor.h"
+#include "control\radio.h"
+
+#include "common\pinDef.h"
+#include "common\utils.h"
 
 /*** PARAMETERS ***/
 #define DEBUG 1

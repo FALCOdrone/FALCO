@@ -1,9 +1,9 @@
-[submodule "Sensor-Fusion"]
-	path = Sensor-Fusion
-	url = https://github.com/FALCOdrone/Sensor-Fusion
-[submodule "Control"]
-	path = Control
-	url = https://github.com/FALCOdrone/Control
 [submodule "sensorFusion"]
 	path = sensorFusion
 	url = https://github.com/FALCOdrone/Sensor-Fusion
+[submodule "control"]
+	path = control
+	url = https://github.com/FALCOdrone/Control
+[submodule "common"]
+	path = common
+	url = https://github.com/FALCOdrone/Common-Utils.git
